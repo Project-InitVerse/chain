@@ -587,6 +587,12 @@ web3._extend({
 			params: 2,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
+		new web3._extend.Method({
+			name: 'call',
+			call: 'eth_call',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter, null],
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
