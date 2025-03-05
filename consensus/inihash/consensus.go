@@ -344,15 +344,15 @@ func calcDifficulty(time uint64, parent *types.Header) *big.Int {
 	// holds intermediate values to make the algo easier to read & audit
 	x := new(big.Int)
 	y := new(big.Int)
-	// 1 - (block_timestamp - parent_timestamp) // 10
+	// 1 - (block_timestamp - parent_timestamp) // 5
 	x.Sub(bigTime, bigParentTime)
 	x.Div(x, big5)
 	x.Sub(big6, x)
-	// max(1 - (block_timestamp - parent_timestamp) // 10, -99)
+	// max(1 - (block_timestamp - parent_timestamp) // 5, -599)
 	if x.Cmp(bigMinus599) < 0 {
 		x.Set(bigMinus599)
 	}
-	// (parent_diff + parent_diff // 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
+	// (parent_diff + parent_diff // 12288 * max(1 - (block_timestamp - parent_timestamp) // 5, -599))
 	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
 	x.Mul(y, x)
 	x.Add(parent.Difficulty, x)
@@ -468,18 +468,6 @@ func (inihash *Inihash) SealHash(header *types.Header) (hash common.Hash) {
 		header.TeamAddress,
 		header.ValidatorRate,
 		header.TeamRate,
-	})
-
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-func (inihash *Inihash) SealParentHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-
-	rlp.Encode(hasher, []interface{}{
-		header.ParentHash,
-		header.Time,
 	})
 
 	hasher.Sum(hash[:0])

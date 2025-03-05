@@ -140,8 +140,7 @@ func (inihash *Inihash) mine(block *types.Block, id int, seed uint64, abort chan
 		header = block.Header()
 		hash   = inihash.SealHash(header).Bytes()
 		target = new(big.Int).Div(two256, header.Difficulty)
-		//number     = header.Number.Uint64()
-		//parentHash = inihash.SealParentHash(header).Bytes()
+
 		extraNonce = header.ExtraNonce
 	)
 	// Start generating random nonces until we abort or find a good one
