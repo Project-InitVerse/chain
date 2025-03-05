@@ -70,8 +70,9 @@ var (
 // codebase, inherently breaking if the engine is swapped out. Please put common
 // error types into the consensus package.
 var (
-	errOlderBlockTime    = errors.New("timestamp older than parent")
-	errTooManyUncles     = errors.New("too many uncles")
+	errOlderBlockTime = errors.New("timestamp older than parent")
+	//errTooManyUncles     = errors.New("too many uncles")
+	errNotSupportUncles  = errors.New("not support uncles")
 	errDuplicateUncle    = errors.New("duplicate uncle")
 	errUncleIsAncestor   = errors.New("uncle is ancestor")
 	errDanglingUncle     = errors.New("uncle's parent is not ancestor")
@@ -194,7 +195,7 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	}
 	// Verify that there are at most 2 uncles included in this block
 	if len(block.Uncles()) > maxUncles {
-		return errTooManyUncles
+		return errNotSupportUncles
 	}
 	if len(block.Uncles()) == 0 {
 		return nil
