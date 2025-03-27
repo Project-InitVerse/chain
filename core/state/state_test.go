@@ -21,10 +21,10 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/crypto"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 type stateTest struct {

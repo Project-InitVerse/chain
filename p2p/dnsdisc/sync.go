@@ -21,8 +21,8 @@ import (
 	"math/rand"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // This is the number of consecutive leaf requests that may fail before

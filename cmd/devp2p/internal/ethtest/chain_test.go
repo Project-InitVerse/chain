@@ -21,8 +21,8 @@ import (
 	"strconv"
 	"testing"
 
-	"PureChain/eth/protocols/eth"
-	"PureChain/p2p"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/p2p"
 	"github.com/stretchr/testify/assert"
 )
 

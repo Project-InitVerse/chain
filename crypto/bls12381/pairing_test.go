@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestPairingExpected(t *testing.T) {

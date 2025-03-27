@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/log"
-	"PureChain/p2p/discover/v5wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/discover/v5wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 const (

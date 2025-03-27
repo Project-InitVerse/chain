@@ -29,10 +29,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // makeGenesis creates a new genesis struct based on some user input.

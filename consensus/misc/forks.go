@@ -19,9 +19,9 @@ package misc
 import (
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // VerifyForkHashes verifies that blocks conforming to network hard-forks do have

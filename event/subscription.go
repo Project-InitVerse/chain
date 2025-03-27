@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/gopool"
-	"PureChain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"golang.org/x/crypto/sha3"
 )
 

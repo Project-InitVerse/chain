@@ -22,7 +22,7 @@ import (
 	"sort"
 	"testing"
 
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // TestDatabaseSuite runs a suite of tests against a KeyValueStore database

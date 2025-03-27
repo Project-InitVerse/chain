@@ -19,7 +19,7 @@ package abi
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 type packUnpackTest struct {

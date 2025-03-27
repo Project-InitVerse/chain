@@ -19,7 +19,7 @@ package types
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 //go:generate gencodec -type AccessTuple -out gen_access_tuple.go

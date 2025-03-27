@@ -19,7 +19,7 @@ package types
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // LegacyTx is the transaction data of regular Ethereum transactions.

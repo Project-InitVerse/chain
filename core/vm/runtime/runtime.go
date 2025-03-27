@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Config is a basic type specifying certain configuration flags for running

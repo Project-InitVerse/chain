@@ -27,14 +27,14 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/event"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk

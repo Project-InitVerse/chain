@@ -19,9 +19,9 @@ package main
 import (
 	"os"
 
-	"PureChain/cmd/devp2p/internal/v4test"
-	"PureChain/internal/utesting"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/cmd/devp2p/internal/v4test"
+	"github.com/Project-InitVerse/chain/internal/utesting"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

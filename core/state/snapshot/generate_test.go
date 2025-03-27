@@ -23,13 +23,13 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/ethdb/memorydb"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -234,10 +234,12 @@ func (t *testHelper) Generate() (common.Hash, *diskLayer) {
 //   - miss in the beginning
 //   - miss in the middle
 //   - miss in the end
+//
 // - the contract(non-empty storage) has wrong storage slots
 //   - wrong slots in the beginning
 //   - wrong slots in the middle
 //   - wrong slots in the end
+//
 // - the contract(non-empty storage) has extra storage slots
 //   - extra slots in the beginning
 //   - extra slots in the middle

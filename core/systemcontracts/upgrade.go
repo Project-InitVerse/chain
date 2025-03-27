@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/state"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 type UpgradeConfig struct {

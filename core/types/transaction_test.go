@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // The values in those tests are from the Transaction Tests

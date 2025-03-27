@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/eth/downloader"
-	"PureChain/eth/protocols/eth"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // Tests that fast sync is disabled after a successful sync cycle.

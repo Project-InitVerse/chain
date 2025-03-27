@@ -19,8 +19,8 @@ package trie
 import (
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

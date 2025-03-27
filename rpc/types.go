@@ -23,8 +23,8 @@ import (
 	"math"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 // API describes the set of methods offered over the RPC interface

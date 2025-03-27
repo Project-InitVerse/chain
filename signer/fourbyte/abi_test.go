@@ -22,8 +22,8 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/accounts/abi"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func verify(t *testing.T, jsondata, calldata string, exp []interface{}) {

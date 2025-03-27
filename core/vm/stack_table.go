@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func minSwapStack(n int) int {

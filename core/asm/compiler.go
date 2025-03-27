@@ -22,8 +22,8 @@ import (
 	"os"
 	"strings"
 
-	"PureChain/common/math"
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 // Compiler contains information about the parsed source

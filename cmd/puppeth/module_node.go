@@ -26,8 +26,8 @@ import (
 	"strings"
 	"text/template"
 
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // nodeDockerfile is the Dockerfile required to run an Ethereum node.

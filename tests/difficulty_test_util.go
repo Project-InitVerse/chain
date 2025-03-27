@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/consensus/ethash"
-	"PureChain/core/types"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 //go:generate gencodec -type DifficultyTest -field-override difficultyTestMarshaling -out gen_difficultytest.go

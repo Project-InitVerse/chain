@@ -30,17 +30,16 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common/hexutil"
-	"PureChain/common/mclock"
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"github.com/davecgh/go-spew/spew"
 )
 
 // To regenerate discv5 test vectors, run
 //
-//     go test -run TestVectors -write-test-vectors
-//
+//	go test -run TestVectors -write-test-vectors
 var writeTestVectorsFlag = flag.Bool("write-test-vectors", false, "Overwrite discv5 test vectors in testdata/")
 
 var (

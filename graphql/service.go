@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"time"
 
-	"PureChain/internal/ethapi"
-	"PureChain/node"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/node"
 	"github.com/graph-gophers/graphql-go"
 )
 

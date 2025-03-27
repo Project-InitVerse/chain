@@ -29,17 +29,17 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/mclock"
-	"PureChain/crypto"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/p2p/discover"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/nat"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/discover"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 const (

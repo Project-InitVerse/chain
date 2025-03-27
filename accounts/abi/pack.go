@@ -22,8 +22,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 // packBytesSlice packs the given bytes as [L, V] as the canonical representation

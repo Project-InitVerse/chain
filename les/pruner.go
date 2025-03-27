@@ -20,10 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/math"
-	"PureChain/core"
-	"PureChain/ethdb"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // pruner is responsible for pruning historical light chain data.

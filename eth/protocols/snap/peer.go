@@ -17,9 +17,9 @@
 package snap
 
 import (
-	"PureChain/common"
-	"PureChain/log"
-	"PureChain/p2p"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
 )
 
 // Peer is a collection of relevant information we have about a `snap` peer.

@@ -29,9 +29,9 @@ import (
 	"testing"
 	"testing/quick"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Tests that updating a state trie does not leak any database writes prior to

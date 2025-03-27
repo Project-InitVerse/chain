@@ -17,7 +17,7 @@
 package runtime
 
 import (
-	"PureChain/core/vm/runtime"
+	"github.com/Project-InitVerse/chain/core/vm/runtime"
 )
 
 // Fuzz is the basic entry point for the go-fuzz tool

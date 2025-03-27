@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 func TestBlockNumberJSONUnmarshal(t *testing.T) {

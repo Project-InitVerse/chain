@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 var (

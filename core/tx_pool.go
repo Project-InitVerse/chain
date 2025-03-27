@@ -24,14 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/prque"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/prque"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 const (

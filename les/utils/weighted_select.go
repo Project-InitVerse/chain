@@ -20,7 +20,7 @@ import (
 	"math"
 	"math/rand"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 type (

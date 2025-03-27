@@ -22,14 +22,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/eth/downloader"
-	"PureChain/eth/protocols/eth"
-	"PureChain/log"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 const (

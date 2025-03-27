@@ -27,17 +27,17 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/tests"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/tests"
 )
 
 // To generate a new callTracer test, copy paste the makeTest method below into

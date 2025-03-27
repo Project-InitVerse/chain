@@ -26,17 +26,17 @@ import (
 	"testing"
 	"time"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/bloombits"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/params"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/bloombits"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 var (

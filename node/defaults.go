@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"PureChain/p2p"
-	"PureChain/p2p/nat"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 const (

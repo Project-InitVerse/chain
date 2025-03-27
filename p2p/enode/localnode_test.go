@@ -21,8 +21,8 @@ import (
 	"net"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 	"github.com/stretchr/testify/assert"
 )
 

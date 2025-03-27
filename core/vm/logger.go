@@ -26,11 +26,11 @@ import (
 
 	"github.com/holiman/uint256"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/core/types"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Storage represents a contract's storage.

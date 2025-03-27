@@ -22,7 +22,7 @@ import (
 	"os"
 	"runtime"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 func init() {

@@ -20,15 +20,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/consensus/misc"
-	"PureChain/core/state"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/misc"
+	"github.com/Project-InitVerse/chain/core/state"
 
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/ethdb"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // BlockGen creates blocks for testing.

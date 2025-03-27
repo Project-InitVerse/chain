@@ -19,9 +19,9 @@ package ethash
 import (
 	"errors"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var errEthashStopped = errors.New("ethash stopped")

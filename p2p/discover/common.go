@@ -20,11 +20,11 @@ import (
 	"crypto/ecdsa"
 	"net"
 
-	"PureChain/common/mclock"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 // UDPConn is a network connection on which discovery can operate.

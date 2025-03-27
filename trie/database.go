@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/VictoriaMetrics/fastcache"
 )
 

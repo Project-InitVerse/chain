@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 type MyType [5]byte

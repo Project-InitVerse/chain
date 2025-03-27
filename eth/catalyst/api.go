@@ -23,16 +23,16 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/eth"
-	"PureChain/log"
-	"PureChain/node"
-	chainParams "PureChain/params"
-	"PureChain/rpc"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	chainParams "github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // Register adds catalyst APIs to the node.

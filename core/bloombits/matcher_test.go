@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 const testSectionSize = 4096

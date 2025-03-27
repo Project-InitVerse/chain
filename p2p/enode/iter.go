@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/gopool"
 )
 
 // Iterator represents a sequence of nodes. The Next method moves to the next node in the

@@ -7,9 +7,9 @@ import (
 
 	"github.com/holiman/uint256"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 var _ = (*structLogMarshaling)(nil)

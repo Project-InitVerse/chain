@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/les/utils"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/les/utils"
 )
 
 // requestDistributor implements a mechanism that distributes requests to

@@ -21,15 +21,15 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/metrics"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 const (

@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/davecgh/go-spew/spew"
 )
 

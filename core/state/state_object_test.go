@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func BenchmarkCutOriginal(b *testing.B) {

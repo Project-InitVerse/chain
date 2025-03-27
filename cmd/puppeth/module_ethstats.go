@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ethstatsDockerfile is the Dockerfile required to build an ethstats backend

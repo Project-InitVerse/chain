@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Strings represents s slice of strs.

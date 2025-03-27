@@ -23,13 +23,13 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"PureChain/accounts"
-	"PureChain/accounts/external"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/external"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ErrNoChainID is returned whenever the user failed to specify a chain id.

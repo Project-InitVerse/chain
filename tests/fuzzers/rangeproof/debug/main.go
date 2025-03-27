@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/tests/fuzzers/rangeproof"
+	"github.com/Project-InitVerse/chain/tests/fuzzers/rangeproof"
 )
 
 func main() {

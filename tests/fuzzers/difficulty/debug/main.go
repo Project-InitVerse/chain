@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/tests/fuzzers/difficulty"
+	"github.com/Project-InitVerse/chain/tests/fuzzers/difficulty"
 )
 
 func main() {

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // manageServers displays a list of servers the user can disconnect from, and an

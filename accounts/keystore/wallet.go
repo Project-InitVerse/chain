@@ -19,10 +19,10 @@ package keystore
 import (
 	"math/big"
 
-	"PureChain"
-	"PureChain/accounts"
-	"PureChain/core/types"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/internal/cmdtest"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/internal/cmdtest"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/docker/docker/pkg/reexec"
 )
 

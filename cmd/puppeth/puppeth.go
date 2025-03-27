@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

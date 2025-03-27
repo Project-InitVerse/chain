@@ -21,15 +21,15 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/light"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 var (

@@ -22,12 +22,12 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/cmd/devp2p/internal/v4test"
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/p2p/discover"
-	"PureChain/p2p/enode"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/cmd/devp2p/internal/v4test"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/discover"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

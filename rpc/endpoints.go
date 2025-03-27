@@ -20,7 +20,7 @@ import (
 	"net"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // StartIPCEndpoint starts an IPC endpoint.

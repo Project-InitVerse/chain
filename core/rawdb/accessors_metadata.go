@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // ReadDatabaseVersion retrieves the version number of the database.

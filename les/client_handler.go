@@ -23,16 +23,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/mclock"
-	"PureChain/core/forkid"
-	"PureChain/core/types"
-	"PureChain/eth/downloader"
-	"PureChain/eth/protocols/eth"
-	"PureChain/light"
-	"PureChain/log"
-	"PureChain/p2p"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // clientHandler is responsible for receiving and processing all incoming server

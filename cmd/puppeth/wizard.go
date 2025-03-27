@@ -31,9 +31,9 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

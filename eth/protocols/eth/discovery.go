@@ -17,10 +17,10 @@
 package eth
 
 import (
-	"PureChain/core"
-	"PureChain/core/forkid"
-	"PureChain/p2p/enode"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // enrEntry is the ENR entry which advertises `eth` protocol on the discovery.

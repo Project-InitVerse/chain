@@ -5,8 +5,8 @@ import (
 	uurl "net/url"
 	"time"
 
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 	"github.com/influxdata/influxdb/client"
 )
 

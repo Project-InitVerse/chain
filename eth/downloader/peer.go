@@ -28,10 +28,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/eth/protocols/eth"
-	"PureChain/event"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 const (

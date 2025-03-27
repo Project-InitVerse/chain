@@ -23,15 +23,15 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 const (
@@ -76,10 +76,13 @@ type TxPool struct {
 //
 // Send instructs backend to forward new transactions
 // NewHead notifies backend about a new head after processed by the tx pool,
-//  including  mined and rolled back transactions since the last event
+//
+//	including  mined and rolled back transactions since the last event
+//
 // Discard notifies backend about transactions that should be discarded either
-//  because they have been replaced by a re-send or because they have been mined
-//  long ago and no rollback is expected
+//
+//	because they have been replaced by a re-send or because they have been mined
+//	long ago and no rollback is expected
 type TxRelayBackend interface {
 	Send(txs types.Transactions)
 	NewHead(head common.Hash, mined []common.Hash, rollback []common.Hash)

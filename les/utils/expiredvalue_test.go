@@ -19,7 +19,7 @@ package utils
 import (
 	"testing"
 
-	"PureChain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/mclock"
 )
 
 func TestValueExpiration(t *testing.T) {

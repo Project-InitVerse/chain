@@ -23,10 +23,10 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/metrics"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

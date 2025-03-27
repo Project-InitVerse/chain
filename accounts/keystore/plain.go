@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 type keyStorePlain struct {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestValidatorSetSort(t *testing.T) {

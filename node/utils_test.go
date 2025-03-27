@@ -20,8 +20,8 @@
 package node
 
 import (
-	"PureChain/p2p"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // NoopLifecycle is a trivial implementation of the Service interface.

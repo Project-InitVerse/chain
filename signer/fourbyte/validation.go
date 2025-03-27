@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/signer/core"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/signer/core"
 )
 
 // ValidateTransaction does a number of checks on the supplied transaction, and

@@ -24,12 +24,12 @@ import (
 	mrand "math/rand"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 func TestDeriveSha(t *testing.T) {

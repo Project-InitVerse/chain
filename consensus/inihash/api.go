@@ -17,10 +17,10 @@
 package inihash
 
 import (
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
 	"errors"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var errEthashStopped = errors.New("inihash stopped")

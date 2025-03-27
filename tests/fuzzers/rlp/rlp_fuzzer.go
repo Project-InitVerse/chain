@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"PureChain/core/types"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 func decodeEncode(input []byte, val interface{}, i int) {

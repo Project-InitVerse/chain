@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"sort"
 
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 // Handler returns an HTTP handler which dump metrics in Prometheus format.

@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"os"
 
-	"PureChain/common/fdlimit"
-	"PureChain/internal/flags"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common/fdlimit"
+	"github.com/Project-InitVerse/chain/internal/flags"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 func TestTableDatabase(t *testing.T)            { testTableDatabase(t, "prefix") }

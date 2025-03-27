@@ -19,8 +19,8 @@ package vm
 import (
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // StateDB is an EVM database for full state querying.

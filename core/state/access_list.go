@@ -17,7 +17,7 @@
 package state
 
 import (
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 type accessList struct {

@@ -24,12 +24,12 @@ import (
 	"math/big"
 	"sort"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/internal/ethapi"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/params"
 	lru "github.com/hashicorp/golang-lru"
 )
 

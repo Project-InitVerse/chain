@@ -19,7 +19,7 @@ package main
 import (
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestFacebook(t *testing.T) {

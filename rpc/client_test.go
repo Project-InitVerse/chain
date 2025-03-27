@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/davecgh/go-spew/spew"
 )
 

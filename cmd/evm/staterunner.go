@@ -23,10 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/core/state"
-	"PureChain/core/vm"
-	"PureChain/log"
-	"PureChain/tests"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/tests"
 
 	"gopkg.in/urfave/cli.v1"
 )

@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/bitutil"
-	"PureChain/core/bloombits"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/node"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/core/bloombits"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/node"
 )
 
 func BenchmarkBloomBits512(b *testing.B) {

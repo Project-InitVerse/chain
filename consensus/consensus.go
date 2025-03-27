@@ -21,11 +21,11 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 var (

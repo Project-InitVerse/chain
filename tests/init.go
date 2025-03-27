@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"sort"
 
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Forks table defines supported forks and their chain config.

@@ -19,8 +19,8 @@ package core
 import (
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/state"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/state"
 )
 
 // txNoncer is a tiny virtual state database to manage the executable nonces of

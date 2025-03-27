@@ -19,10 +19,10 @@ package state
 import (
 	"sync"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 const abortChanSize = 64

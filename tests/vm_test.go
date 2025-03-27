@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 func TestVM(t *testing.T) {

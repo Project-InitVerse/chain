@@ -20,10 +20,10 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/common/prque"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/prque"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

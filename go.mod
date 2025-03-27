@@ -1,4 +1,4 @@
-module PureChain
+module github.com/Project-InitVerse/chain
 
 go 1.15
 

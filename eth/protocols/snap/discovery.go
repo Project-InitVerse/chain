@@ -17,7 +17,7 @@
 package snap
 
 import (
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // enrEntry is the ENR entry which advertises `snap` protocol on the discovery.

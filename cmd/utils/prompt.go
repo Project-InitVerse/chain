@@ -20,7 +20,7 @@ package utils
 import (
 	"fmt"
 
-	"PureChain/console/prompt"
+	"github.com/Project-InitVerse/chain/console/prompt"
 )
 
 // GetPassPhrase displays the given text(prompt) to the user and requests some textual

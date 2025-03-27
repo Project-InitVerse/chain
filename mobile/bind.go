@@ -22,11 +22,11 @@ import (
 	"math/big"
 	"strings"
 
-	"PureChain/accounts/abi"
-	"PureChain/accounts/abi/bind"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Signer is an interface defining the callback when a contract requires a

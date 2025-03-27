@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain"
-	"PureChain/accounts/abi"
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/event"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

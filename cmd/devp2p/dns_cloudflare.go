@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/log"
-	"PureChain/p2p/dnsdisc"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/dnsdisc"
 	"github.com/cloudflare/cloudflare-go"
 	"gopkg.in/urfave/cli.v1"
 )

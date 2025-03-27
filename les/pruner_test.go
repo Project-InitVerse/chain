@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/core"
-	"PureChain/light"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/light"
 )
 
 func TestLightPruner(t *testing.T) {

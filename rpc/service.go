@@ -26,7 +26,7 @@ import (
 	"sync"
 	"unicode"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 var (

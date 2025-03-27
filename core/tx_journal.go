@@ -21,10 +21,10 @@ import (
 	"io"
 	"os"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

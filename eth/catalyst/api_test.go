@@ -20,15 +20,15 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/eth"
-	"PureChain/eth/ethconfig"
-	"PureChain/node"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/eth"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 var (

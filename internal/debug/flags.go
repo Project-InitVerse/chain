@@ -24,9 +24,9 @@ import (
 	"os"
 	"runtime"
 
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/metrics/exp"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/metrics/exp"
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"

@@ -23,10 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/mclock"
-	"PureChain/core"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var (

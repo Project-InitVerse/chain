@@ -19,7 +19,7 @@ package trie
 import (
 	"fmt"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)

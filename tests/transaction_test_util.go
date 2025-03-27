@@ -19,12 +19,12 @@ package tests
 import (
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.

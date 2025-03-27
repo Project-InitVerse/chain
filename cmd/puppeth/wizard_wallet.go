@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployWallet creates a new web wallet based on some user input.

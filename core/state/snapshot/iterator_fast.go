@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sort"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // weightedIterator is a iterator with an assigned weight. It is used to prioritise

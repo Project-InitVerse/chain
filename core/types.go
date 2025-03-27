@@ -17,9 +17,9 @@
 package core
 
 import (
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It

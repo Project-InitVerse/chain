@@ -19,8 +19,8 @@ package main
 import (
 	"fmt"
 
-	"PureChain/cmd/utils"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/common"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

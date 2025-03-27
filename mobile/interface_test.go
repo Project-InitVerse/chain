@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestInterfaceGetSet(t *testing.T) {

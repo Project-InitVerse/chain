@@ -25,9 +25,9 @@ import (
 	"io"
 	"sort"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/trie"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -114,8 +114,10 @@ func (k kvs) Swap(i, j int) {
 
 // The function must return
 // 1 if the fuzzer should increase priority of the
-//    given input during subsequent fuzzing (for example, the input is lexically
-//    correct and was parsed successfully);
+//
+//	given input during subsequent fuzzing (for example, the input is lexically
+//	correct and was parsed successfully);
+//
 // -1 if the input must not be added to corpus even if gives new coverage; and
 // 0  otherwise
 // other values are reserved for future use.

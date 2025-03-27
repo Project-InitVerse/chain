@@ -21,9 +21,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 var EVMInterpreterPool = sync.Pool{

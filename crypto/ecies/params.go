@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "PureChain/crypto"
+	ethcrypto "github.com/Project-InitVerse/chain/crypto"
 )
 
 var (

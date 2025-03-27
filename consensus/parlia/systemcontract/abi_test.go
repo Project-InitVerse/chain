@@ -1,7 +1,7 @@
 package systemcontract
 
 import (
-	"PureChain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"

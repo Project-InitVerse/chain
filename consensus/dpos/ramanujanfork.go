@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"time"
 
-	"PureChain/consensus"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 const (

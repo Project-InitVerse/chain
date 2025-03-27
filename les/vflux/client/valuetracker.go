@@ -23,12 +23,12 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/ethdb"
-	"PureChain/les/utils"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 const (

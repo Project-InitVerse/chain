@@ -22,14 +22,14 @@ import (
 	"math/rand"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/prque"
-	"PureChain/consensus"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/prque"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 const (

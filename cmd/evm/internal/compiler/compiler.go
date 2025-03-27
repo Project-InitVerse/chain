@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/core/asm"
+	"github.com/Project-InitVerse/chain/core/asm"
 )
 
 func Compile(fn string, src []byte, debug bool) (string, error) {

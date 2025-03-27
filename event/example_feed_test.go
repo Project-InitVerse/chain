@@ -19,7 +19,7 @@ package event_test
 import (
 	"fmt"
 
-	"PureChain/event"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 func ExampleFeed_acknowledgedEvents() {

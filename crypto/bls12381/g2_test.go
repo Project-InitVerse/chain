@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func (g *G2) one() *PointG2 {

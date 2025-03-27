@@ -39,7 +39,7 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 func TestKDF(t *testing.T) {

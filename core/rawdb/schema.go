@@ -21,8 +21,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"PureChain/common"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 // The fields below define the low level database schema prefixing.

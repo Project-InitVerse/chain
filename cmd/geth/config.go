@@ -27,13 +27,13 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
-	"PureChain/cmd/utils"
-	"PureChain/eth/catalyst"
-	"PureChain/eth/ethconfig"
-	"PureChain/internal/ethapi"
-	"PureChain/metrics"
-	"PureChain/node"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/eth/catalyst"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/params"
 	"github.com/naoina/toml"
 )
 

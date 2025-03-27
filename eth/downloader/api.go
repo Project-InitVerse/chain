@@ -20,10 +20,10 @@ import (
 	"context"
 	"sync"
 
-	"PureChain"
-	"PureChain/common/gopool"
-	"PureChain/event"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

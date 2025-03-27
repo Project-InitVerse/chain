@@ -25,14 +25,14 @@ import (
 	"sync"
 	"time"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // filter is a helper struct that holds meta information over the filter type

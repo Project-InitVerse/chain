@@ -30,8 +30,8 @@ import (
 	"text/template"
 	"unicode"
 
-	"PureChain/accounts/abi"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // Lang is a target programming language selector to generate bindings for.

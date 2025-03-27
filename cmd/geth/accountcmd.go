@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/cmd/utils"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

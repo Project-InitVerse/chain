@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // NodeIterator is an iterator to traverse the entire state trie post-order,

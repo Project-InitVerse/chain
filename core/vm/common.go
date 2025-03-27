@@ -17,8 +17,8 @@
 package vm
 
 import (
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 	"github.com/holiman/uint256"
 )
 

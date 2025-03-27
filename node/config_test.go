@@ -24,8 +24,8 @@ import (
 	"runtime"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/p2p"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured

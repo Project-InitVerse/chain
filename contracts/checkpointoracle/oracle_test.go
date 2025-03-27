@@ -27,13 +27,13 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts/abi/bind"
-	"PureChain/accounts/abi/bind/backends"
-	"PureChain/common"
-	"PureChain/contracts/checkpointoracle/contract"
-	"PureChain/core"
-	"PureChain/crypto"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind/backends"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/contracts/checkpointoracle/contract"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 var (

@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func TestTransaction(t *testing.T) {

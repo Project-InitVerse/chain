@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"testing"
 
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/vm"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 	"github.com/davecgh/go-spew/spew"
 )
 

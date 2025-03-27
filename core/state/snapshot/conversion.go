@@ -26,14 +26,14 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/gopool"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // trieKV represents a trie key-value pair

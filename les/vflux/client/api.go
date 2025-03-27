@@ -19,9 +19,9 @@ package client
 import (
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/les/utils"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // PrivateClientAPI implements the vflux client side API

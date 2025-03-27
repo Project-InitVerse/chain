@@ -24,9 +24,9 @@ import (
 	"reflect"
 	"time"
 
-	"PureChain/crypto"
-	"PureChain/internal/utesting"
-	"PureChain/p2p/discover/v4wire"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/internal/utesting"
+	"github.com/Project-InitVerse/chain/p2p/discover/v4wire"
 )
 
 const (

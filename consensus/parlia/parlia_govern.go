@@ -1,19 +1,19 @@
 package parlia
 
 import (
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/consensus/parlia/systemcontract"
-	"PureChain/consensus/parlia/vmcaller"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/rlp"
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/parlia/systemcontract"
+	"github.com/Project-InitVerse/chain/consensus/parlia/vmcaller"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
 	"math"
 	"math/big"
 )
@@ -88,7 +88,7 @@ func (c *Parlia) getPassedProposalByIndex(chain consensus.ChainHeaderReader, hea
 	return prop, nil
 }
 
-//finishProposalById
+// finishProposalById
 func (c *Parlia) finishProposalById(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, id *big.Int) error {
 	method := "finishProposalById"
 	data, err := c.abi[systemcontract.SysGovContractName].Pack(method, id)

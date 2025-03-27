@@ -19,7 +19,7 @@ package rlp
 import (
 	"testing"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 // TestIterator tests some basic things about the ListIterator. A more

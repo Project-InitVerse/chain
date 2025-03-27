@@ -18,8 +18,8 @@
 package ethconfig
 
 import (
-	"PureChain/consensus/dpos"
-	"PureChain/consensus/inihash"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
+	"github.com/Project-InitVerse/chain/consensus/inihash"
 	"math/big"
 	"os"
 	"os/user"
@@ -27,20 +27,20 @@ import (
 	"runtime"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/consensus/clique"
-	"PureChain/consensus/ethash"
-	"PureChain/consensus/parlia"
-	"PureChain/core"
-	"PureChain/eth/downloader"
-	"PureChain/eth/gasprice"
-	"PureChain/ethdb"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/miner"
-	"PureChain/node"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // FullNodeGPO contains default gasprice oracle settings for full node.

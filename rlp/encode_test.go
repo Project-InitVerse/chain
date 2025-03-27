@@ -27,7 +27,7 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 type testEncoder struct {

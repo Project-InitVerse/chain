@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/light"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/light"
 )
 
 var testBankSecureTrieKey = secAddr(bankAddr)

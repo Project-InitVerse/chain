@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // nginxDockerfile is theis the Dockerfile required to build an nginx reverse-

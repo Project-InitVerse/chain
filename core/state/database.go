@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/trie"
 	"github.com/VictoriaMetrics/fastcache"
 	lru "github.com/hashicorp/golang-lru"
 )

@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/stretchr/testify/assert"
 )
 

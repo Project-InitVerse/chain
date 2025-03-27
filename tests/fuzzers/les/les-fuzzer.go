@@ -22,17 +22,17 @@ import (
 	"io"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	l "PureChain/les"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	l "github.com/Project-InitVerse/chain/les"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 var (

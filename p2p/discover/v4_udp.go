@@ -29,13 +29,13 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/gopool"
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/p2p/discover/v4wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/netutil"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/discover/v4wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Errors

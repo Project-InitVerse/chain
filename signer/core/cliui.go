@@ -24,10 +24,10 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/common/hexutil"
-	"PureChain/console/prompt"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/console/prompt"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 type CommandlineUI struct {

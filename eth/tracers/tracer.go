@@ -25,12 +25,12 @@ import (
 	"time"
 	"unsafe"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/olebedev/go-duktape.v3"
 )
 

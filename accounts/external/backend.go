@@ -21,15 +21,15 @@ import (
 	"math/big"
 	"sync"
 
-	"PureChain"
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/rpc"
-	"PureChain/signer/core"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
+	"github.com/Project-InitVerse/chain/signer/core"
 )
 
 type ExternalBackend struct {

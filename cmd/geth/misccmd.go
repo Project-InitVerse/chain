@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/cmd/utils"
-	"PureChain/consensus/ethash"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

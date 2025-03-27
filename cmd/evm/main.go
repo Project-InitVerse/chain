@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"os"
 
-	"PureChain/cmd/evm/internal/t8ntool"
-	"PureChain/cmd/utils"
-	"PureChain/internal/flags"
+	"github.com/Project-InitVerse/chain/cmd/evm/internal/t8ntool"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/internal/flags"
 	"gopkg.in/urfave/cli.v1"
 )
 

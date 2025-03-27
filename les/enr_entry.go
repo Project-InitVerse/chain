@@ -17,10 +17,10 @@
 package les
 
 import (
-	"PureChain/core/forkid"
-	"PureChain/p2p/dnsdisc"
-	"PureChain/p2p/enode"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/p2p/dnsdisc"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // lesEntry is the "les" ENR entry. This is set for LES servers only.

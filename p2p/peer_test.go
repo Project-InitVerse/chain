@@ -28,9 +28,9 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 var discard = Protocol{

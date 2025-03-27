@@ -24,16 +24,16 @@ import (
 	"strconv"
 	"time"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/eth/filters"
-	"PureChain/internal/ethapi"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/eth/filters"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 var (

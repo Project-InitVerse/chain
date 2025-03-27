@@ -19,8 +19,8 @@ package leveldb
 import (
 	"testing"
 
-	"PureChain/ethdb"
-	"PureChain/ethdb/dbtest"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/dbtest"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 )

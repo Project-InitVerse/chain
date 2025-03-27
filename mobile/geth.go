@@ -24,17 +24,17 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"PureChain/core"
-	"PureChain/eth/downloader"
-	"PureChain/eth/ethconfig"
-	"PureChain/ethclient"
-	"PureChain/ethstats"
-	"PureChain/internal/debug"
-	"PureChain/les"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/nat"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/ethclient"
+	"github.com/Project-InitVerse/chain/ethstats"
+	"github.com/Project-InitVerse/chain/internal/debug"
+	"github.com/Project-InitVerse/chain/les"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth

@@ -25,12 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/crypto"
-	"PureChain/internal/testlog"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/internal/testlog"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 	"github.com/davecgh/go-spew/spew"
 )
 

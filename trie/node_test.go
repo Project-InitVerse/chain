@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 func newTestFullNode(v []byte) []interface{} {

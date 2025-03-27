@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/core/forkid"
-	"PureChain/p2p/enr"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 	"gopkg.in/urfave/cli.v1"
 )
 

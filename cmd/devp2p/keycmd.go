@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"net"
 
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"gopkg.in/urfave/cli.v1"
 )
 

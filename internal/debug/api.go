@@ -34,7 +34,7 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // Handler is the global debugging handler.
