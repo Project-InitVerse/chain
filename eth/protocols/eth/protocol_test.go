@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Tests that the custom union field encoder and decoder works correctly.

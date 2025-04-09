@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/core/state/snapshot"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/state/snapshot"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Constants to match up protocol versions and messages

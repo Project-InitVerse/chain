@@ -20,10 +20,10 @@ import (
 	"errors"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // NodeSet stores a set of trie nodes. It implements trie.Database and can also

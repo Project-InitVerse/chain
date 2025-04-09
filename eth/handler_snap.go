@@ -17,9 +17,9 @@
 package eth
 
 import (
-	"PureChain/core"
-	"PureChain/eth/protocols/snap"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth/protocols/snap"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // snapHandler implements the snap.Backend interface to handle the various network

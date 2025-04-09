@@ -24,11 +24,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/ethdb/leveldb"
-	"PureChain/ethdb/memorydb"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/leveldb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/olekukonko/tablewriter"
 )
 

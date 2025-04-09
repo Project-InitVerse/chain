@@ -19,11 +19,11 @@ package core
 import (
 	"sync/atomic"
 
-	"PureChain/consensus"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // statePrefetcher is a basic Prefetcher, which blindly executes a block on top

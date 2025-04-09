@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
 )

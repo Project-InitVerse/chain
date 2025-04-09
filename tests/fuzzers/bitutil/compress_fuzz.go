@@ -19,7 +19,7 @@ package bitutil
 import (
 	"bytes"
 
-	"PureChain/common/bitutil"
+	"github.com/Project-InitVerse/chain/common/bitutil"
 )
 
 // Fuzz implements a go-fuzz fuzzer method to test various encoding method

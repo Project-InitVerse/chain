@@ -19,7 +19,7 @@ package server
 import (
 	"reflect"
 
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 type peerWrapper struct{ clientPeer } // the NodeStateMachine type system needs this wrapper

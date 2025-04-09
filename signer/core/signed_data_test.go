@@ -26,12 +26,12 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/crypto"
-	"PureChain/signer/core"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/signer/core"
 )
 
 var typesStandard = core.Types{

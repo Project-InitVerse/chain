@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/stretchr/testify/require"
 )
 

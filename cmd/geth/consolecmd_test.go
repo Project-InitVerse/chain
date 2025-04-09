@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 const (

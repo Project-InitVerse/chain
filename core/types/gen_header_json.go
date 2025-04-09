@@ -3,10 +3,10 @@
 package types
 
 import (
-	"PureChain/common"
-	"PureChain/common/hexutil"
 	"encoding/json"
 	"errors"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 	"math/big"
 )
 

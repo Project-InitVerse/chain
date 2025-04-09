@@ -19,8 +19,8 @@ package trie
 import (
 	"testing"
 
-	"PureChain/common"
-	"PureChain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
 )
 
 // Tests that the trie database returns a missing trie node error if attempting

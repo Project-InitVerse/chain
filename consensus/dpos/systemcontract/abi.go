@@ -1,10 +1,10 @@
 package systemcontract
 
 import (
-	"PureChain/accounts/abi"
-	"PureChain/common"
-	"PureChain/params"
 	"fmt"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/params"
 	"math/big"
 	"strings"
 )

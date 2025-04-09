@@ -24,8 +24,8 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	"PureChain/common/math"
-	"PureChain/crypto/secp256k1"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/crypto/secp256k1"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.

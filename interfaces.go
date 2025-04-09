@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.

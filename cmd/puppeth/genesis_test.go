@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/core"
+	"github.com/Project-InitVerse/chain/core"
 	"github.com/davecgh/go-spew/spew"
 )
 

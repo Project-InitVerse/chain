@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/ethdb/memorydb"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 
-	"PureChain/les/utils"
+	"github.com/Project-InitVerse/chain/les/utils"
 )
 
 const (

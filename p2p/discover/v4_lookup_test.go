@@ -23,10 +23,10 @@ import (
 	"sort"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/p2p/discover/v4wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/discover/v4wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 func TestUDPv4_Lookup(t *testing.T) {

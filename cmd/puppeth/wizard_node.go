@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployNode creates a new node configuration based on some user input.

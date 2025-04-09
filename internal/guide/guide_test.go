@@ -30,9 +30,9 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Tests that the account management snippets work correctly.

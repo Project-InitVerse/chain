@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/core"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/olekukonko/tablewriter"
 )
 

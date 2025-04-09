@@ -22,7 +22,7 @@ package metrics
 import (
 	"syscall"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // getProcessCPUTime retrieves the process' CPU time since program startup.

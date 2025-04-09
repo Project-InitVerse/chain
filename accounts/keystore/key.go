@@ -29,9 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/google/uuid"
 )
 

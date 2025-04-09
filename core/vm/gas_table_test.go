@@ -21,11 +21,11 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func TestMemoryGasCost(t *testing.T) {

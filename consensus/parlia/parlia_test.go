@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestImpactOfValidatorOutOfService(t *testing.T) {

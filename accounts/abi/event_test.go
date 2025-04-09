@@ -25,8 +25,8 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

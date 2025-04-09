@@ -1,9 +1,9 @@
 package parlia
 
 import (
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 ////

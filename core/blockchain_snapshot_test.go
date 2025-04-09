@@ -28,13 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/consensus"
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/ethdb"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // snapshotTestBasic wraps the common testing fields in the snapshot tests.

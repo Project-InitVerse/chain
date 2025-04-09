@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // dashboardContent is the actual dashboard HTML content to serve up when users

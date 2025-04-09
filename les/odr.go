@@ -21,10 +21,10 @@ import (
 	"sort"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/core"
-	"PureChain/ethdb"
-	"PureChain/light"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/light"
 )
 
 // LesOdr implements light.OdrBackend

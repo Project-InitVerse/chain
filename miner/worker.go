@@ -17,25 +17,25 @@
 package miner
 
 import (
-	"PureChain/consensus/dpos"
 	"encoding/hex"
 	"errors"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/consensus/parlia"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 	mapset "github.com/deckarep/golang-set"
 )
 

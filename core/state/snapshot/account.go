@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Account is a modified version of a state.Account, where the root is replaced

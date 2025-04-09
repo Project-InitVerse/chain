@@ -19,8 +19,8 @@ package p2p
 import (
 	"fmt"
 
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 // Protocol represents a P2P subprotocol implementation.

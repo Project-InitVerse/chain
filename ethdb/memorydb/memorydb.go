@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 var (

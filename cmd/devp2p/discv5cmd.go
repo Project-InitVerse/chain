@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/cmd/devp2p/internal/v5test"
-	"PureChain/common"
-	"PureChain/p2p/discover"
+	"github.com/Project-InitVerse/chain/cmd/devp2p/internal/v5test"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/p2p/discover"
 	"gopkg.in/urfave/cli.v1"
 )
 

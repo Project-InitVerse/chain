@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 const (

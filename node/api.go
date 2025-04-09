@@ -21,14 +21,14 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/crypto"
-	"PureChain/internal/debug"
-	"PureChain/log"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/internal/debug"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // apis returns the collection of built-in RPC APIs.

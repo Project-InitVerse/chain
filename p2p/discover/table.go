@@ -32,11 +32,11 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 const (

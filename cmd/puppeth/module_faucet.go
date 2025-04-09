@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // faucetDockerfile is the Dockerfile required to build a faucet container to

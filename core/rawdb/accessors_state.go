@@ -17,9 +17,9 @@
 package rawdb
 
 import (
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ReadPreimage retrieves a single preimage of the provided hash.

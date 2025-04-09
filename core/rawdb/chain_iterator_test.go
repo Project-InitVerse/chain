@@ -23,8 +23,8 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 func TestChainIterator(t *testing.T) {

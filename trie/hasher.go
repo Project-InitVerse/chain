@@ -19,8 +19,8 @@ package trie
 import (
 	"sync"
 
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

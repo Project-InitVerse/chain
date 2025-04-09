@@ -17,8 +17,8 @@
 package catalyst
 
 import (
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 //go:generate go run github.com/fjl/gencodec -type assembleBlockParams -field-override assembleBlockParamsMarshaling -out gen_blockparams.go

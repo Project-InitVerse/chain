@@ -19,7 +19,7 @@ package snapshot
 import (
 	"bytes"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // binaryIterator is a simplistic iterator to step over the accounts or storage

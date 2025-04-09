@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // Enabled is checked by the constructor functions for all of the

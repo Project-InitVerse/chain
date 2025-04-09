@@ -25,13 +25,13 @@ import (
 	"regexp"
 	"strings"
 
-	"PureChain/accounts/abi"
-	"PureChain/accounts/abi/bind"
-	"PureChain/cmd/utils"
-	"PureChain/common/compiler"
-	"PureChain/crypto"
-	"PureChain/internal/flags"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/common/compiler"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/internal/flags"
+	"github.com/Project-InitVerse/chain/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

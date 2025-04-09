@@ -22,13 +22,13 @@ import (
 	"reflect"
 	"time"
 
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/eth/protocols/eth"
-	"PureChain/internal/utesting"
-	"PureChain/p2p"
-	"PureChain/p2p/rlpx"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/internal/utesting"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/rlpx"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type Message interface {

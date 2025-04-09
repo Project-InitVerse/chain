@@ -25,12 +25,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/accounts/abi/bind"
-	"PureChain/common"
-	"PureChain/contracts/checkpointoracle"
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/contracts/checkpointoracle"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // CheckpointOracle is responsible for offering the latest stable checkpoint

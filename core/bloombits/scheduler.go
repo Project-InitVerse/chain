@@ -19,7 +19,7 @@ package bloombits
 import (
 	"sync"
 
-	"PureChain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/gopool"
 )
 
 // request represents a bloom retrieval task to prioritize and pull from the local

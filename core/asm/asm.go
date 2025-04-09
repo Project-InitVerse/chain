@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 // Iterator for disassembled EVM instructions

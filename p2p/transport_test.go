@@ -22,8 +22,8 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/p2p/simulations/pipes"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/simulations/pipes"
 	"github.com/davecgh/go-spew/spew"
 )
 

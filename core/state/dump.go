@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // DumpCollector interface which the state trie calls during iteration

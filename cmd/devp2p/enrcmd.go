@@ -28,9 +28,9 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 	"gopkg.in/urfave/cli.v1"
 )
 

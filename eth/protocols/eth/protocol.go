@@ -22,10 +22,10 @@ import (
 	"io"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/forkid"
-	"PureChain/core/types"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Constants to match up protocol versions and messages

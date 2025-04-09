@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 var _ = (*stEnvMarshaling)(nil)

@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 func TestMakeTopics(t *testing.T) {

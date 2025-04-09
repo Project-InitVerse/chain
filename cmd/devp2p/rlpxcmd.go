@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"net"
 
-	"PureChain/cmd/devp2p/internal/ethtest"
-	"PureChain/crypto"
-	"PureChain/internal/utesting"
-	"PureChain/p2p"
-	"PureChain/p2p/rlpx"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/cmd/devp2p/internal/ethtest"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/internal/utesting"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/rlpx"
+	"github.com/Project-InitVerse/chain/rlp"
 	"gopkg.in/urfave/cli.v1"
 )
 

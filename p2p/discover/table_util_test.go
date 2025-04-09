@@ -27,10 +27,10 @@ import (
 	"sort"
 	"sync"
 
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 var nullNode *enode.Node

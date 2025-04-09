@@ -19,7 +19,7 @@ package downloader
 import (
 	"fmt"
 
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

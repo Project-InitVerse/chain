@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func TestHexOrDecimal256(t *testing.T) {

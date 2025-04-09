@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/les/utils"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 var errBalanceOverflow = errors.New("balance overflow")

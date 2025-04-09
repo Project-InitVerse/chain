@@ -25,9 +25,9 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common/hexutil"
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 func TestVector_ECDH(t *testing.T) {

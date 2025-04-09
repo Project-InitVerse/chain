@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 var (

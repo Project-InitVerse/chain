@@ -23,10 +23,10 @@ import (
 	"math/rand"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/mclock"
-	"PureChain/core/types"
-	"PureChain/eth/fetcher"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/fetcher"
 )
 
 var (

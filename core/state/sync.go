@@ -19,10 +19,10 @@ package state
 import (
 	"bytes"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common/hexutil"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 type bytesBacked interface {

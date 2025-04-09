@@ -26,7 +26,7 @@ import (
 	"math/rand"
 	"time"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/dop251/goja"
 )
 

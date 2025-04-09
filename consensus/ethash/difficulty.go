@@ -19,7 +19,7 @@ package ethash
 import (
 	"math/big"
 
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/holiman/uint256"
 )
 

@@ -21,17 +21,17 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus/clique"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/eth/downloader"
-	"PureChain/ethdb/memorydb"
-	"PureChain/event"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 type mockBackend struct {

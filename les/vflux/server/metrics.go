@@ -17,7 +17,7 @@
 package server
 
 import (
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 var (

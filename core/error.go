@@ -19,7 +19,7 @@ package core
 import (
 	"errors"
 
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var (

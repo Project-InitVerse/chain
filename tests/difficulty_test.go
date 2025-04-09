@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 var (

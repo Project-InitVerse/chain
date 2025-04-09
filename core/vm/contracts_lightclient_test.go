@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"PureChain/core/vm/lightclient"
+	"github.com/Project-InitVerse/chain/core/vm/lightclient"
 	"github.com/stretchr/testify/require"
 )
 

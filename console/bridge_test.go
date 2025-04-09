@@ -19,7 +19,7 @@ package console
 import (
 	"testing"
 
-	"PureChain/internal/jsre"
+	"github.com/Project-InitVerse/chain/internal/jsre"
 	"github.com/dop251/goja"
 )
 

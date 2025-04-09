@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/common/hexutil"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // In this example, our client wishes to track the latest 'block number'

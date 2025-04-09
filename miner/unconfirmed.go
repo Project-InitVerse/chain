@@ -20,9 +20,9 @@ import (
 	"container/ring"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // chainRetriever is used by the unconfirmed block set to verify whether a previously

@@ -24,14 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // Type determines the kind of filter and is used to put the filter in to

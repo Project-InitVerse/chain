@@ -26,7 +26,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ipcListen will create a Unix socket on the given endpoint.

@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.

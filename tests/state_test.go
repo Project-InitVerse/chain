@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 func TestState(t *testing.T) {

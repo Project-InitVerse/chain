@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/rlp"
 	bloomfilter "github.com/holiman/bloomfilter/v2"
 )
 

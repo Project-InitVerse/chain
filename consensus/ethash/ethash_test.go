@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Tests that ethash works correctly in test mode.

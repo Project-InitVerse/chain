@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
 )
 
 // Tests that given a database with random data content, all parts of a snapshot

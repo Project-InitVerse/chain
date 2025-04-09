@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 // Tests that data bitset encoding and decoding works and is bijective.

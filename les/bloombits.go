@@ -19,8 +19,8 @@ package les
 import (
 	"time"
 
-	"PureChain/common/bitutil"
-	"PureChain/light"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/light"
 )
 
 const (

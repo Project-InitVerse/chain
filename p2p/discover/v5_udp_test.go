@@ -28,12 +28,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/internal/testlog"
-	"PureChain/log"
-	"PureChain/p2p/discover/v5wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/internal/testlog"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/discover/v5wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Real sockets, real crypto: this test checks end-to-end connectivity for UDPv5.

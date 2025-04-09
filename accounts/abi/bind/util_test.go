@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts/abi/bind"
-	"PureChain/accounts/abi/bind/backends"
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind/backends"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")

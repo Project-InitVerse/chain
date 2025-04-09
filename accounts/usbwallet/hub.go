@@ -23,9 +23,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/event"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/karalabe/usb"
 )
 

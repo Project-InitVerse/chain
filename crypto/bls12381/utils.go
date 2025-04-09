@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 func bigFromHex(hex string) *big.Int {

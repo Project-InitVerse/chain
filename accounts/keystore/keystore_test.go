@@ -28,10 +28,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/event"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 var testSigData = make([]byte, 32)

@@ -20,7 +20,7 @@
 package metrics
 
 import (
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/shirou/gopsutil/cpu"
 )
 

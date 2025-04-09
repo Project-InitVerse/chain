@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // TestPack tests the general pack/unpack tests in packing_test.go

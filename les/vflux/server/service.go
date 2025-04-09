@@ -22,11 +22,11 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/les/utils"
-	"PureChain/les/vflux"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/les/vflux"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type (

@@ -25,14 +25,14 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/forkid"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 type testServerPeerSub struct {

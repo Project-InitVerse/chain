@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"PureChain/internal/flags"
+	"github.com/Project-InitVerse/chain/internal/flags"
 	"gopkg.in/urfave/cli.v1"
 )
 

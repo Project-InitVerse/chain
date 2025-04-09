@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // Handler returns a log handler which logs to the unit test log of t.

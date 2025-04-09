@@ -20,10 +20,10 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/vm"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Tests that DAO-fork enabled clients can properly filter out fork-commencing

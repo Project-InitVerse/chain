@@ -23,7 +23,7 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/p2p/simulations/pipes"
+	"github.com/Project-InitVerse/chain/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

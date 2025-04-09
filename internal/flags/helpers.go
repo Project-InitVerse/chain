@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

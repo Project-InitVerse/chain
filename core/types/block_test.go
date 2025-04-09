@@ -23,11 +23,11 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/crypto"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

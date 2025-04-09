@@ -23,14 +23,14 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain"
-	"PureChain/accounts/abi"
-	"PureChain/accounts/abi/bind"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type mockCaller struct {

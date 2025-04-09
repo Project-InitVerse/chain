@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"PureChain/event"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

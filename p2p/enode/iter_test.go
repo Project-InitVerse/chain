@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 func TestReadNodes(t *testing.T) {

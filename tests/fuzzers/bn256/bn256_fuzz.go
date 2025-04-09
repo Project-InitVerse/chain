@@ -13,8 +13,8 @@ import (
 	"io"
 	"math/big"
 
-	cloudflare "PureChain/crypto/bn256/cloudflare"
-	google "PureChain/crypto/bn256/google"
+	cloudflare "github.com/Project-InitVerse/chain/crypto/bn256/cloudflare"
+	google "github.com/Project-InitVerse/chain/crypto/bn256/google"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 )
 

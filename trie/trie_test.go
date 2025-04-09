@@ -30,12 +30,12 @@ import (
 	"testing"
 	"testing/quick"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/ethdb/leveldb"
-	"PureChain/ethdb/memorydb"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/leveldb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/crypto/sha3"
 )

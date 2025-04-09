@@ -19,7 +19,7 @@ package snapshot
 import (
 	"bytes"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // hashes is a helper to implement sort.Interface.

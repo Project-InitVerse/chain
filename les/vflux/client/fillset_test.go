@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 type testIter struct {

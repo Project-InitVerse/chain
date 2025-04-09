@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployEthstats queries the user for various input on deploying an ethstats

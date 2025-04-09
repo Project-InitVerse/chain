@@ -26,17 +26,17 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/accounts"
-	"PureChain/accounts/external"
-	"PureChain/accounts/keystore"
-	"PureChain/accounts/scwallet"
-	"PureChain/accounts/usbwallet"
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/external"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/accounts/scwallet"
+	"github.com/Project-InitVerse/chain/accounts/usbwallet"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 const (

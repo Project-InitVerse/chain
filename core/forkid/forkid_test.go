@@ -21,9 +21,9 @@ import (
 	"math"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // TestCreation tests that different genesis and fork rule combinations result in

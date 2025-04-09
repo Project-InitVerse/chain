@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 func TestMocker(t *testing.T) {

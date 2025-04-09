@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.

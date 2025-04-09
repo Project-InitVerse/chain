@@ -21,9 +21,9 @@ import (
 	"container/heap"
 	"errors"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.

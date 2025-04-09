@@ -23,9 +23,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/VictoriaMetrics/fastcache"
 )
 

@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

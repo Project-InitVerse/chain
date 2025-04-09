@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

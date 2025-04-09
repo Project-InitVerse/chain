@@ -24,14 +24,14 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/ethdb/memorydb"
-	"PureChain/les/vflux"
-	vfs "PureChain/les/vflux/server"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/les/vflux"
+	vfs "github.com/Project-InitVerse/chain/les/vflux/server"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var (

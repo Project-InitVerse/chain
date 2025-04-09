@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"PureChain/eth/tracers/internal/tracers"
+	"github.com/Project-InitVerse/chain/eth/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

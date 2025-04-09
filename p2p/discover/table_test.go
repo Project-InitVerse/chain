@@ -27,10 +27,10 @@ import (
 	"testing/quick"
 	"time"
 
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 func TestTable_pingReplace(t *testing.T) {

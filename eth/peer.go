@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/eth/protocols/eth"
-	"PureChain/eth/protocols/snap"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/eth/protocols/snap"
 )
 
 // ethPeerInfo represents a short summary of the `eth` sub-protocol metadata known

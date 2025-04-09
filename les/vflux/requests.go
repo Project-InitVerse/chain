@@ -21,7 +21,7 @@ import (
 	"math"
 	"math/big"
 
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var ErrNoReply = errors.New("no reply for given request")

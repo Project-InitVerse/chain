@@ -19,7 +19,7 @@ package vm
 import (
 	"testing"
 
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 func TestJumpDestAnalysis(t *testing.T) {

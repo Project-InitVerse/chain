@@ -19,8 +19,8 @@ package memorydb
 import (
 	"testing"
 
-	"PureChain/ethdb"
-	"PureChain/ethdb/dbtest"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/dbtest"
 )
 
 func TestMemoryDB(t *testing.T) {

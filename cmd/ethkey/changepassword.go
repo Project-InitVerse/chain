@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"PureChain/accounts/keystore"
-	"PureChain/cmd/utils"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

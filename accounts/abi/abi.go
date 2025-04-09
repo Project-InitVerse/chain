@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io"
 
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 // The ABI holds information about a contract's context and available

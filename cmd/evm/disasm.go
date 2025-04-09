@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"PureChain/core/asm"
+	"github.com/Project-InitVerse/chain/core/asm"
 	"gopkg.in/urfave/cli.v1"
 )
 

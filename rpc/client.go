@@ -28,7 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 var (

@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 func TestStreamKind(t *testing.T) {

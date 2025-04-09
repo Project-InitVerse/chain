@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/light"
+	"github.com/Project-InitVerse/chain/light"
 )
 
 var (

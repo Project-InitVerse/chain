@@ -26,7 +26,7 @@ import (
 	"path"
 	"strings"
 
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common/math"
 	"gopkg.in/urfave/cli.v1"
 )
 

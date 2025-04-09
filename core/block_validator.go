@@ -17,12 +17,12 @@
 package core
 
 import (
-	"PureChain/consensus"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/trie"
 	"fmt"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

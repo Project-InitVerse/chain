@@ -19,8 +19,8 @@ package client
 import (
 	"sync"
 
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 // FillSet tries to read nodes from an input iterator and add them to a node set by

@@ -23,10 +23,10 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
 )
 
 func TestIterator(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/les/utils"
+	"github.com/Project-InitVerse/chain/les/utils"
 )
 
 func checkU64(t *testing.T, name string, value, exp uint64) {

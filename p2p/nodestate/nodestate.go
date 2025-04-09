@@ -23,13 +23,13 @@ import (
 	"time"
 	"unsafe"
 
-	"PureChain/common/mclock"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var (

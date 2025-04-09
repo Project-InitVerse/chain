@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/gopool"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

@@ -25,10 +25,10 @@ import (
 	"time"
 	"unsafe"
 
-	"PureChain/consensus"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 

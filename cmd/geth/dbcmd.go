@@ -24,14 +24,14 @@ import (
 	"strconv"
 	"time"
 
-	"PureChain/cmd/utils"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/console/prompt"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/console/prompt"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/trie"
 	"gopkg.in/urfave/cli.v1"
 )
 

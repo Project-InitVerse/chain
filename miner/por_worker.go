@@ -1,15 +1,15 @@
 package miner
 
 import (
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core"
-	"PureChain/log"
-	"PureChain/params"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"math/big"

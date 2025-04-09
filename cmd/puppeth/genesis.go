@@ -22,13 +22,13 @@ import (
 	"math/big"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	math2 "PureChain/common/math"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	math2 "github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // alethGenesisSpec represents the genesis specification format used by the

@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/internal/utesting"
-	"PureChain/p2p/discover/v5wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/internal/utesting"
+	"github.com/Project-InitVerse/chain/p2p/discover/v5wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 // Suite is the discv5 test suite.

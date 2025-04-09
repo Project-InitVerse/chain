@@ -16,7 +16,7 @@
 
 package downloader
 
-import "PureChain/core/types"
+import "github.com/Project-InitVerse/chain/core/types"
 
 type DoneEvent struct {
 	Latest *types.Header

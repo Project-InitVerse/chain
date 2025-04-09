@@ -17,7 +17,6 @@
 package inihash
 
 import (
-	"PureChain/crypto/versaHash"
 	"bytes"
 	"context"
 	crand "crypto/rand"
@@ -25,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain/crypto/versaHash"
 	"math"
 	"math/big"
 	"math/rand"
@@ -33,11 +33,11 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 const (

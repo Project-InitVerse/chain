@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"strings"
 
-	ethereum "PureChain"
-	"PureChain/accounts/abi"
-	"PureChain/accounts/abi/bind"
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/event"
+	ethereum "github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

@@ -22,8 +22,8 @@ package eth
 import (
 	"crypto/rand"
 
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // testPeer is a simulated peer to allow testing direct network calls.

@@ -41,10 +41,10 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/event"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
 	pcsc "github.com/gballet/go-libpcsclite"
 )
 

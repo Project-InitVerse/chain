@@ -27,10 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/log"
-	"PureChain/node"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/simulations/adapters"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/simulations/adapters"
 )
 
 // Tests that a created snapshot with a minimal service only contains the expected connections

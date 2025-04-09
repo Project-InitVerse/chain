@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 // a regexp for extracting the unit from time.Duration.String

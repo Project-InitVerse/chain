@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

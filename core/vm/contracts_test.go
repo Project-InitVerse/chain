@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.

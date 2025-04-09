@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var _ = (*btHeaderMarshaling)(nil)

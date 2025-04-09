@@ -19,7 +19,7 @@
 package downloader
 
 import (
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 var (

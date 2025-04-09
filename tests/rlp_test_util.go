@@ -24,7 +24,7 @@ import (
 	"math/big"
 	"strings"
 
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // RLPTest is the JSON structure of a single RLP test.

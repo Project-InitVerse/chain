@@ -5,13 +5,13 @@ package ethconfig
 import (
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/eth/downloader"
-	"PureChain/eth/gasprice"
-	"PureChain/miner"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // MarshalTOML marshals as TOML.

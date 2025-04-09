@@ -25,8 +25,8 @@ import (
 	"sort"
 	"time"
 
-	"PureChain/common"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 const jsonIndent = "    "

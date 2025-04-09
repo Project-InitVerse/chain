@@ -19,8 +19,8 @@ package client
 import (
 	"io"
 
-	"PureChain/les/utils"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 const basketFactor = 1000000 // reference basket amount and value scale factor

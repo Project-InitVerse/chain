@@ -26,11 +26,11 @@ import (
 	"os"
 	"strings"
 
-	"PureChain/core"
-	"PureChain/core/forkid"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type Chain struct {

@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/common/prque"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/prque"
 )
 
 // cmNodeFields are ClientNode fields used by the client manager

@@ -23,15 +23,15 @@ import (
 	"os"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func BenchmarkInsertChain_empty_memdb(b *testing.B) {

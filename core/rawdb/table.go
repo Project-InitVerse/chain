@@ -17,7 +17,7 @@
 package rawdb
 
 import (
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // table is a wrapper around a database that prefixes each key access with a pre-

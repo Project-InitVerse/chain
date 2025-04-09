@@ -24,11 +24,11 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 // SignerUIAPI implements methods Clef provides for a UI to query, in the bidirectional communication

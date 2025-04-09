@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // walletDockerfile is the Dockerfile required to run a web wallet.

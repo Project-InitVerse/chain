@@ -23,13 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/eth/protocols/eth"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // ethHandler implements the eth.Backend interface to handle the various network
