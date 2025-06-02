@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/core/rawdb"
-	"PureChain/les/utils"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 func expval(v uint64) utils.ExpiredValue {

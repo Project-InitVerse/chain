@@ -25,7 +25,7 @@ import (
 	"regexp"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/jedisct1/go-minisign"
 	"gopkg.in/urfave/cli.v1"
 )

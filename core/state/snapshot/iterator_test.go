@@ -23,8 +23,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
 	"github.com/VictoriaMetrics/fastcache"
 )
 

@@ -21,7 +21,7 @@ package p2p
 import (
 	"net"
 
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 const (

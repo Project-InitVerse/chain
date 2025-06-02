@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployDashboard queries the user for various input on deploying a web-service

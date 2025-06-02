@@ -27,13 +27,13 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/accounts"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/p2p"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/prometheus/tsdb/fileutil"
 )
 

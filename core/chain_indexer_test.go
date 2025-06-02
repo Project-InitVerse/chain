@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Runs multiple tests with randomized parameters.

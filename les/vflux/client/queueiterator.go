@@ -19,8 +19,8 @@ package client
 import (
 	"sync"
 
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 // QueueIterator returns nodes from the specified selectable set in the same order as

@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 func init() {

@@ -19,7 +19,7 @@ package state
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // journalEntry is a modification entry in the state change journal that can be

@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 const (

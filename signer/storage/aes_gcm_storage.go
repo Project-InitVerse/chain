@@ -25,7 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 type storedCredential struct {

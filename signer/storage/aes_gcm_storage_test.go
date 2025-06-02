@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/mattn/go-colorable"
 )
 

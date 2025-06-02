@@ -19,8 +19,8 @@ package les
 import (
 	"errors"
 
-	"PureChain/log"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 type ulc struct {

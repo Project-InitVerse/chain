@@ -22,8 +22,8 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/accounts/abi"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Tests that all the selectors contained in the 4byte database are valid.

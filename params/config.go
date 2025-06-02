@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"golang.org/x/crypto/sha3"
 )
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xe76594bfc14eab4637bedd609506c5475e3fa19703e3ecbc501e2e89e50961e1")
-	TestnetGenesisHash = common.HexToHash("0x00ddd8230d6e2fbc257d9c10d87b5312e7a34c13165d2b2170fbdbcbdff8b0bc")
+	MainnetGenesisHash = common.HexToHash("0x4e4e431cdf9b687f0d5252430ecaa87d8836241dfe9d7a00b3bc1d2d27e5b6b7")
+	TestnetGenesisHash = common.HexToHash("0xa667b690602f8a56361d218d51995a1f68c1dfc9da8b4e324d0edc9c26789658")
+	DevnetGenesisHash  = common.HexToHash("0xfa7b620726816b0c3d7e953c46c51f2bb4b1c9839092d1f9ace3b72883b0a356")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -48,7 +49,7 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(229),
+		ChainID:        big.NewInt(7233),
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   big.NewInt(0),
 		DAOForkSupport: true,
@@ -67,14 +68,33 @@ var (
 		BerlinBlock:         big.NewInt(4),
 		RedCoastBlock:       big.NewInt(22222222220),
 		//Ethash:              new(EthashConfig),
-		Dpos: &DposConfig{
-			Period: 2,
-			Epoch:  200,
-		},
+		Inihash: &InihashConfig{},
 	}
 
 	TestnetChainConfig = &ChainConfig{
-		ChainID:        big.NewInt(772),
+		ChainID:        big.NewInt(7234),
+		HomesteadBlock: big.NewInt(0),
+		DAOForkBlock:   big.NewInt(0),
+		DAOForkSupport: true,
+		EIP150Block:    big.NewInt(0),
+		//EIP150Hash:          common.HexToHash("0x1d12c075af6bbc568c300efde2b765c990d298322ecc760d1ac0d053dbe05f39"),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		RamanujanBlock:      big.NewInt(0),
+		NielsBlock:          big.NewInt(0),
+		MirrorSyncBlock:     big.NewInt(0),
+		BerlinBlock:         big.NewInt(4),
+		RedCoastBlock:       big.NewInt(22222222220),
+		//Ethash:              new(EthashConfig),
+		Inihash: &InihashConfig{},
+	}
+	DevnetChainConfig = &ChainConfig{
+		ChainID:        big.NewInt(7235),
 		HomesteadBlock: big.NewInt(0),
 		DAOForkBlock:   big.NewInt(0),
 		DAOForkSupport: true,
@@ -90,13 +110,10 @@ var (
 		RamanujanBlock:      big.NewInt(0),
 		NielsBlock:          big.NewInt(0),
 		MirrorSyncBlock:     big.NewInt(0),
-		BerlinBlock:         big.NewInt(37000),
-		RedCoastBlock:       big.NewInt(2),
+		BerlinBlock:         big.NewInt(4),
+		RedCoastBlock:       big.NewInt(22222222220),
 		//Ethash:              new(EthashConfig),
-		Dpos: &DposConfig{
-			Period: 2,
-			Epoch:  200,
-		},
+		Inihash: &InihashConfig{},
 	}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
@@ -109,14 +126,8 @@ var (
 
 	// MainnetCheckpointOracle contains a set of configs for the main network oracle.
 	MainnetCheckpointOracle = &CheckpointOracleConfig{
-		Address: common.HexToAddress("0x9a9070028361F7AAbeB3f2F2Dc07F82C4a98A02a"),
-		Signers: []common.Address{
-			common.HexToAddress("0xe9f0b3bd1dc6c7b45cc79e25fc137ad4cc458f67"), // Peter
-			common.HexToAddress("0x73c20c4b7aae3d19eb66decf4b53e4b4cd1bf57a"), // Martin
-			common.HexToAddress("0x9da829429c3b4ca01b124f5459aa02e16ede4193"), // Zsolt
-			common.HexToAddress("0xddf0b34dc25afc45d73daaee709837ee3286f032"), // Gary
-			common.HexToAddress("0xf5c62635a788a9d6259c75a93f1a66d6e44276d9"), // Guillaume
-		},
+		Address:   common.HexToAddress(""),
+		Signers:   []common.Address{},
 		Threshold: 2,
 	}
 
@@ -342,16 +353,16 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(DposConfig)}
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(InihashConfig), nil, nil, nil}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil, nil}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil, nil}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), new(EthashConfig), nil, nil, nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(InihashConfig), nil, nil, nil}
 
 	TestRules = TestChainConfig.Rules(new(big.Int))
 )
@@ -442,7 +453,9 @@ type ChainConfig struct {
 	MirrorSyncBlock *big.Int `json:"mirrorSyncBlock,omitempty" toml:",omitempty"` // mirrorSyncBlock switch block (nil = no fork, 0 = already activated)
 
 	// Various consensus engines
-	Ethash *EthashConfig `json:"ethash,omitempty" toml:",omitempty"`
+	Ethash  *EthashConfig  `json:"ethash,omitempty" toml:",omitempty"`
+	Inihash *InihashConfig `json:"inihash,omitempty" toml:",omitempty"`
+
 	Clique *CliqueConfig `json:"clique,omitempty" toml:",omitempty"`
 	Parlia *ParliaConfig `json:"parlia,omitempty" toml:",omitempty"`
 	Dpos   *DposConfig   `json:"dpos,omitempty" toml:",omitempty"`
@@ -450,10 +463,14 @@ type ChainConfig struct {
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
 type EthashConfig struct{}
+type InihashConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
 func (c *EthashConfig) String() string {
 	return "ethash"
+}
+func (c *InihashConfig) String() string {
+	return "inihash"
 }
 
 // CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
@@ -505,6 +522,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Parlia
 	case c.Dpos != nil:
 		engine = c.Dpos
+	case c.Inihash != nil:
+		engine = c.Inihash
 	default:
 		engine = "unknown"
 	}

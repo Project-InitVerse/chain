@@ -26,9 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common/bitutil"
-	"PureChain/common/gopool"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

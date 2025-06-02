@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 var ErrInvalidChainId = errors.New("invalid chain id for signer")

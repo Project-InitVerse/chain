@@ -4013,7 +4013,7 @@ var from_b58 = function(S,A){var d=[],b=[],i,j,c,n;for(i in S){j=0,c=A.indexOf(S
     return res};
 
 var inputAddressFormatter = function (address) {
-    if(/^U4.+$/.test(address)){
+    if(/^I4.+$/.test(address)){
       address= "0x"+from_b58(address.substr(2),MAP)
     }
   var iban = new Iban(address);
@@ -5544,6 +5544,11 @@ var methods = function () {
         call: 'eth_submitWork',
         params: 3
     });
+    var getBlockReward = new Method({
+        name: 'getBlockReward',
+        call: 'eth_getBlockReward',
+        params: 1
+    });
 
     var getWork = new Method({
         name: 'getWork',
@@ -5577,7 +5582,8 @@ var methods = function () {
         compileLLL,
         compileSerpent,
         submitWork,
-        getWork
+        getWork,
+        getBlockReward
     ];
 };
 

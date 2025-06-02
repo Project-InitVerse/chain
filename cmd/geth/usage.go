@@ -22,9 +22,9 @@ import (
 	"io"
 	"sort"
 
-	"PureChain/cmd/utils"
-	"PureChain/internal/debug"
-	"PureChain/internal/flags"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/internal/debug"
+	"github.com/Project-InitVerse/chain/internal/flags"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -45,6 +45,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.NetworkIdFlag,
 			utils.MainnetFlag,
 			utils.TestnetFlag,
+			utils.DevnetFlag,
 			utils.SyncModeFlag,
 			utils.ExitWhenSyncedFlag,
 			utils.GCModeFlag,

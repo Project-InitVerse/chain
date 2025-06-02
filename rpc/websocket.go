@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 )

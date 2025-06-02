@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"PureChain/cmd/evm/internal/compiler"
+	"github.com/Project-InitVerse/chain/cmd/evm/internal/compiler"
 
 	"gopkg.in/urfave/cli.v1"
 )

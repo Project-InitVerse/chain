@@ -26,9 +26,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"PureChain/common"
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 	"github.com/golang/snappy"
 )
 

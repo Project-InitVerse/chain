@@ -19,8 +19,8 @@ package runtime_test
 import (
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/core/vm/runtime"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/vm/runtime"
 )
 
 func ExampleExecute() {

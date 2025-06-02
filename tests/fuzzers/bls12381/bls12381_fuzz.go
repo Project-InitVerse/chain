@@ -26,7 +26,7 @@ import (
 	"io"
 	"math/big"
 
-	"PureChain/crypto/bls12381"
+	"github.com/Project-InitVerse/chain/crypto/bls12381"
 	gnark "github.com/consensys/gnark-crypto/ecc/bls12-381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"

@@ -22,11 +22,11 @@ import (
 	"sort"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 	lru "github.com/hashicorp/golang-lru"
 )
 

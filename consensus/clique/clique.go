@@ -26,21 +26,21 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/consensus/misc"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/rpc"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/misc"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/rpc"
+	"github.com/Project-InitVerse/chain/trie"
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/sha3"
 )
@@ -548,7 +548,7 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
 func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header,
-	receipts *[]*types.Receipt, _ *[]*types.Transaction, _ *uint64) (err error) {
+	receipts *[]*types.Receipt, _ *[]*types.Transaction, _ *uint64, _ bool) (err error) {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)

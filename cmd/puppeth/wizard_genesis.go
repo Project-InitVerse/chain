@@ -29,10 +29,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // makeGenesis creates a new genesis struct based on some user input.
@@ -65,6 +65,10 @@ func (w *wizard) makeGenesis() {
 	case choice == "1":
 		// In case of ethash, we're pretty much done
 		genesis.Config.Ethash = new(params.EthashConfig)
+		genesis.ExtraData = make([]byte, 32)
+	case choice == "3":
+		// In case of inihash, we're pretty much done
+		genesis.Config.Inihash = new(params.InihashConfig)
 		genesis.ExtraData = make([]byte, 32)
 
 	case choice == "" || choice == "2":

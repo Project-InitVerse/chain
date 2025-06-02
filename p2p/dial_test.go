@@ -27,11 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/internal/testlog"
-	"PureChain/log"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/internal/testlog"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 // This test checks that dynamic dials are launched from discovery results.

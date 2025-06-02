@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 func TestUnmarshalJSONNewFilterArgs(t *testing.T) {

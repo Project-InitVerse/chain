@@ -21,8 +21,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"PureChain/common/mclock"
-	"PureChain/common/prque"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/prque"
 )
 
 // servingQueue allows running tasks in a limited number of threads and puts the

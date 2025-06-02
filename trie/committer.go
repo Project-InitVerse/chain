@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 	"golang.org/x/crypto/sha3"
 )
 

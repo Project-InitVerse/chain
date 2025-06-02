@@ -23,8 +23,8 @@ import (
 	"sort"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 var txSortedMapPool = sync.Pool{

@@ -23,9 +23,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"PureChain/accounts/keystore"
-	"PureChain/cmd/utils"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/google/uuid"
 	"gopkg.in/urfave/cli.v1"
 )

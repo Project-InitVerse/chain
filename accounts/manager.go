@@ -21,8 +21,8 @@ import (
 	"sort"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/event"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/event"
 )
 
 // Config contains the settings of the global account manager.

@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common/hexutil"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"github.com/davecgh/go-spew/spew"
 )
 

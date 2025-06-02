@@ -28,22 +28,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/mclock"
-	"PureChain/common/prque"
-	"PureChain/consensus"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/state/snapshot"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/prque"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/state/snapshot"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -85,7 +85,7 @@ const (
 	receiptsCacheLimit  = 10000
 	txLookupCacheLimit  = 1024
 	maxFutureBlocks     = 256
-	maxTimeFutureBlocks = 30
+	maxTimeFutureBlocks = 60
 	badBlockLimit       = 10
 	maxBeyondBlocks     = 2048
 
@@ -1892,10 +1892,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		substart := time.Now()
 
 		receipts, logs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
-		if block.Transactions().Len() > 0 {
-			tttt, _ := block.Transactions()[0].MarshalJSON()
-			fmt.Println(usedGas, string(tttt))
-		}
+
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return it.index, err
@@ -2387,12 +2384,12 @@ func (bc *BlockChain) maintainTxIndex(ancients uint64) {
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	rawdb.WriteBadBlock(bc.db, block)
 
-	var receiptString string
-	for i, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v bloom: %x state: %x\n",
-			i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
-			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
-	}
+	//var receiptString string
+	//for i, receipt := range receipts {
+	//	receiptString += fmt.Sprintf("\t %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v bloom: %x state: %x\n",
+	//		i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
+	//		receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
+	//}
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
@@ -2403,7 +2400,7 @@ Hash: 0x%x
 
 Error: %v
 ##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+`, bc.chainConfig, block.Number(), block.Hash(), "", err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local

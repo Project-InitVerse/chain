@@ -24,17 +24,17 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/core/rawdb"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/ethdb/memorydb"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 	"github.com/VictoriaMetrics/fastcache"
 )
 
@@ -560,6 +560,12 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		default:
 		}
 		if batch.ValueSize() > ethdb.IdealBatchSize || abort != nil {
+			if bytes.Compare(currentLocation, dl.genMarker) < 0 {
+				log.Error("Snapshot generator went backwards",
+					"currentLocation", fmt.Sprintf("%x", currentLocation),
+					"genMarker", fmt.Sprintf("%x", dl.genMarker))
+			}
+
 			// Flush out the batch anyway no matter it's empty or not.
 			// It's possible that all the states are recovered and the
 			// generation indeed makes progress.
@@ -636,7 +642,14 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			stats.accounts++
 		}
 		// If we've exceeded our batch allowance or termination was requested, flush to disk
-		if err := checkAndFlush(accountHash[:]); err != nil {
+		marker := accountHash[:]
+		// If the snap generation goes here after interrupted, genMarker may go backward
+		// when last genMarker is consisted of accountHash and storageHash
+		if accMarker != nil && bytes.Equal(marker, accMarker) && len(dl.genMarker) > common.HashLength {
+			marker = dl.genMarker[:]
+		}
+		//if err := checkAndFlush(accountHash[:]); err != nil {
+		if err := checkAndFlush(marker); err != nil {
 			return err
 		}
 		// If the iterated account is the contract, create a further loop to

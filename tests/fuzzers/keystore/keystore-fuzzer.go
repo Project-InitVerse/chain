@@ -19,7 +19,7 @@ package keystore
 import (
 	"os"
 
-	"PureChain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
 )
 
 func Fuzz(input []byte) int {

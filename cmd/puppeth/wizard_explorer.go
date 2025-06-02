@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployExplorer creates a new block explorer based on some user input.

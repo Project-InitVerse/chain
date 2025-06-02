@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"PureChain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/abi"
 	fuzz "github.com/google/gofuzz"
 )
 

@@ -23,10 +23,10 @@ import (
 	"errors"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 const (

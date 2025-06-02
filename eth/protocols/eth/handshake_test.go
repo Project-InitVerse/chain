@@ -20,10 +20,10 @@ import (
 	"errors"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/forkid"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // Tests that handshake failures are detected and reported correctly.

@@ -27,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/log"
 	mapset "github.com/deckarep/golang-set"
 )
 

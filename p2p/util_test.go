@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common/mclock"
+	"github.com/Project-InitVerse/chain/common/mclock"
 )
 
 func TestExpHeap(t *testing.T) {

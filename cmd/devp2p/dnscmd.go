@@ -25,11 +25,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/console/prompt"
-	"PureChain/p2p/dnsdisc"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/console/prompt"
+	"github.com/Project-InitVerse/chain/p2p/dnsdisc"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"gopkg.in/urfave/cli.v1"
 )
 

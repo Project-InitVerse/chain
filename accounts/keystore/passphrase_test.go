@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 const (

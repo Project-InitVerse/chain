@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/davecgh/go-spew/spew"
 )
 

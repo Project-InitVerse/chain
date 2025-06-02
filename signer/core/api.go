@@ -25,15 +25,15 @@ import (
 	"os"
 	"reflect"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/accounts/scwallet"
-	"PureChain/accounts/usbwallet"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/signer/storage"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/accounts/scwallet"
+	"github.com/Project-InitVerse/chain/accounts/usbwallet"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/signer/storage"
 )
 
 const (

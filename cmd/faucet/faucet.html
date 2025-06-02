@@ -6,7 +6,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<title>UBIC FAUCET</title>
+	<title>INI FAUCET</title>
 
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
@@ -102,20 +102,20 @@
 	<div id="contendBody" class="container">
 		<div class="contentWrap">
 			<div class="row" style="margin-bottom: 24px;">
-				<h1 style="text-align: center;">UBIC FAUCET</h1>
+				<h1 style="text-align: center;">INI FAUCET</h1>
 			</div>
 			<div class="content">
-				<div style="margin-bottom: 30px;">Fast and reliable. 0.5 test UBIC/day.</div>
+				<div style="margin-bottom: 30px;">Fast and reliable. 0.1 test INI/day.</div>
 				<div style="margin: 0 auto;">
 					<div style="margin-bottom: 10px;">Wallet Address</div>
 					<input id="url" name="url" type="text" class="form-control"
-						placeholder="Please input your ETH wallet address.">
+						placeholder="Please input your INI wallet address.">
 				</div>
-				<div style="font-size: 14px;margin: 10px 0 24px;">
-					Once you tweet with your address with the drip faucet URL and tell us where to find the tweet,you will get the
-					<span style="color: #4060E3;">test UBIC</span>.
-				</div>
-				<div style="margin-bottom: 24px;text-decoration: underline;">
+				<!--				<div style="font-size: 14px;margin: 10px 0 24px;">-->
+				<!--					Once you tweet with your address with the drip faucet URL and tell us where to find the tweet,you will get the-->
+				<!--					<span style="color: #4060E3;">test INI</span>.-->
+				<!--				</div>-->
+				<!-- <div style="margin-bottom: 24px;text-decoration: underline;">
 					<a style="font-size: 14px;" onclick="openTwitterUrl()">Generate the tweet for me and I'll
 						share!</a>
 				</div>
@@ -125,25 +125,79 @@
 						<input id="tweetUrl" name="tweetUrl" type="text" class="form-control"
 							placeholder="Please input your tweet URL.">
 					</div>
+				</div> -->
+				<div style="margin: 34px 0;display: flex;justify-content: center;align-items: center;" id="recaptcha_element">
 				</div>
-				<div style="margin-bottom: 34px;display: flex;justify-content: center;align-items: center;"
-					id="recaptcha_element"></div>
 				<div style="text-align: center;">
 					<button style="max-width: 100%;width: 664px;height: 47px;" type="button" onclick="submit()">Send Me Test
-						UBIC</button>
+						INI</button>
 				</div>
+				<div id="time_left_tip" style="font-size: 14px;color: red;margin-top: 8px;text-align: center;display: none;">
+					Please collect the INI token tomorrow. lt has been less than <span style="color: #4060E3;"
+						id="time_left"></span> since the last collection.</div>
 			</div>
 		</div>
 	</div>
 
 	<script>
 		// Global variables to hold the current status of the faucet
+
 		var attempt = 0;
 		var server;
 		var tier = 0;
-		var symbol = "UBIC";
+		var symbol = "INI";
 		var requests = [];
 		var captcha;
+
+		var decode = function (string) {
+			var ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+			var ALPHABET_MAP = {};
+			var i = 0;
+
+			while (i < ALPHABET.length) {
+				ALPHABET_MAP[ALPHABET.charAt(i)] = i;
+				i++;
+			}
+			var bytes, c, carry, j;
+			if (string.length === 0) {
+				return new (typeof Uint8Array !== "undefined" && Uint8Array !== null ? Uint8Array : Buffer)(0);
+			}
+			i = void 0;
+			j = void 0;
+			bytes = [0];
+			i = 0;
+			while (i < string.length) {
+				c = string[i];
+				if (!(c in ALPHABET_MAP)) {
+					throw "Base58.decode received unacceptable input. Character '" + c + "' is not in the Base58 alphabet.";
+				}
+				j = 0;
+				while (j < bytes.length) {
+					bytes[j] *= 58;
+					j++;
+				}
+				bytes[0] += ALPHABET_MAP[c];
+				carry = 0;
+				j = 0;
+				while (j < bytes.length) {
+					bytes[j] += carry;
+					carry = bytes[j] >> 8;
+					bytes[j] &= 0xff;
+					++j;
+				}
+				while (carry) {
+					bytes.push(carry & 0xff);
+					carry >>= 8;
+				}
+				i++;
+			}
+			i = 0;
+			while (string[i] === "1" && i < string.length - 1) {
+				bytes.push(0);
+				i++;
+			}
+			return String.fromCharCode.apply(null, new (typeof Uint8Array !== "undefined" && Uint8Array !== null ? Uint8Array : Buffer)(bytes.reverse()))
+		};
 
 		// Define a function that creates closures to drop old requests
 		var dropper = function (hash) {
@@ -170,9 +224,12 @@
 
 		var openTwitterUrl = function () {
 			var address = $("#url")[0].value
+			if (address.startsWith("I4")) {
+				address = "0x" + decode(address.substring(2))
+			}
 
 			if (address.match(/^(0x)?[0-9a-fA-F]{40}$/)) {
-				window.open('https://twitter.com/intent/tweet?text=Requesting%20faucet%20funds%20into%20' + address + '%20on%20the%20%23Ubic%20Cloud%20%20test%20network.')
+				window.open('https://twitter.com/intent/tweet?text=Requesting%20faucet%20funds%20into%20' + address + '%20on%20the%20%23InChain%20%20test%20network.')
 			} else {
 				noty({ layout: 'topCenter', text: 'Invalid address!', type: 'error', timeout: 500, progressBar: true });
 			}
@@ -180,15 +237,29 @@
 
 		// Define the function that submits a gist url to the server
 		var submit = function () {
-			var twitterUrl = $("#tweetUrl")[0].value
+			// var twitterUrl = $("#tweetUrl")[0].value
 
-			if (!!twitterUrl) {
+			// if (!!twitterUrl) {
+			// 	server.send(JSON.stringify({
+			// 		url: twitterUrl, symbol, tier, captcha
+			// 	}));
+			// 	hcaptcha.reset();
+			// } else {
+			// 	noty({ layout: 'topCenter', text: 'Empty twitter URL!', type: 'error', timeout: 500, progressBar: true });
+			// }
+
+			var address = $("#url")[0].value
+			if (address.startsWith("I4")) {
+				address = "0x" + decode(address.substring(2))
+			}
+
+			if (address.match(/^(0x)?[0-9a-fA-F]{40}$/)) {
 				server.send(JSON.stringify({
-					url: twitterUrl, symbol, tier, captcha
+					url: address, symbol, tier, captcha
 				}));
 				hcaptcha.reset();
 			} else {
-				noty({ layout: 'topCenter', text: 'Empty twitter URL!', type: 'error', timeout: 500, progressBar: true });
+				noty({ layout: 'topCenter', text: 'Invalid address!', type: 'error', timeout: 500, progressBar: true });
 			}
 		};
 
@@ -215,10 +286,14 @@
 					$("#block").text(parseInt(msg.number, 16));
 				}
 				if (msg.error !== undefined) {
+					$("#time_left_tip").show()
+					$("#time_left").text(msg.error.split(' left until next allowance')[0])
 					noty({ layout: 'topCenter', text: msg.error, type: 'error', timeout: 5000, progressBar: true });
 				}
 				if (msg.success !== undefined) {
-					noty({ layout: 'topCenter', text: msg.success, type: 'success', timeout: 5000, progressBar: true });
+					$("#time_left_tip").hide()
+					const _msg = '<span style="word-break: break-all;">' + msg.success + "<span/>"
+					noty({ layout: 'topCenter', text: _msg, type: 'success', timeout: 10000, progressBar: true });
 				}
 				if (msg.requests !== undefined && msg.requests !== null) {
 					// Mark all previous requests missing as done

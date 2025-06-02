@@ -1,8 +1,8 @@
 package systemcontract
 
 import (
-	"PureChain/core/state"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/params"
 	"math/big"
 )
 

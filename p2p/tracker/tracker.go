@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 const (

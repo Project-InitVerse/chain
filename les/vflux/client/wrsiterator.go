@@ -19,9 +19,9 @@ package client
 import (
 	"sync"
 
-	"PureChain/les/utils"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nodestate"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nodestate"
 )
 
 // WrsIterator returns nodes from the specified selectable set with a weighted random

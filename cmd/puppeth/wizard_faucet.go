@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"PureChain/accounts/keystore"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // deployFaucet queries the user for various input on deploying a faucet, after

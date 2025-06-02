@@ -24,13 +24,13 @@ import (
 	"net"
 	"os"
 
-	"PureChain/cmd/utils"
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/p2p/discover"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nat"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/discover"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 func main() {

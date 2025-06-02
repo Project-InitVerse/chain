@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"sync"
 
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/metrics/prometheus"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/metrics/prometheus"
 )
 
 type exp struct {

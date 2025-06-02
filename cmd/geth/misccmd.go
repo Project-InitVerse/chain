@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/cmd/utils"
-	"PureChain/consensus/ethash"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/params"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -127,6 +127,7 @@ func makedag(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Invalid block number: %v", err)
 	}
+	fmt.Println("xxxxdasdadasdasdasdasdas")
 	ethash.MakeDataset(block, args[1])
 
 	return nil

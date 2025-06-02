@@ -24,14 +24,14 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 var (

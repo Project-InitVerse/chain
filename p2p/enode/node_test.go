@@ -24,8 +24,8 @@ import (
 	"testing"
 	"testing/quick"
 
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

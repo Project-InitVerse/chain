@@ -1,10 +1,10 @@
 package systemcontract
 
 import (
-	"PureChain/accounts/abi"
-	"PureChain/common"
-	"PureChain/params"
 	"fmt"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/params"
 	"math/big"
 	"strings"
 )
@@ -1560,6 +1560,57 @@ var ProviderFactoryABI = `[
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "from",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "size",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMarginInfoList",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "margin_amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "withdrawn",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "margin_time",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "margin_lock_time",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "remain_margin_amount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct marginViewInfo[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "account",
           "type": "address"
@@ -1772,6 +1823,43 @@ var ProviderFactoryABI = `[
                   "internalType": "uint256",
                   "name": "last_margin_time",
                   "type": "uint256"
+                },
+                {
+                  "components": [
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_amount",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "withdrawn",
+                      "type": "bool"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_time",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_lock_time",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "remain_margin_amount",
+                      "type": "uint256"
+                    }
+                  ],
+                  "internalType": "struct marginViewInfo[]",
+                  "name": "margin_infos",
+                  "type": "tuple[]"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "margin_size",
+                  "type": "uint256"
                 }
               ],
               "internalType": "struct providerInfo",
@@ -1929,6 +2017,43 @@ var ProviderFactoryABI = `[
                   "internalType": "uint256",
                   "name": "last_margin_time",
                   "type": "uint256"
+                },
+                {
+                  "components": [
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_amount",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "bool",
+                      "name": "withdrawn",
+                      "type": "bool"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_time",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "margin_lock_time",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "remain_margin_amount",
+                      "type": "uint256"
+                    }
+                  ],
+                  "internalType": "struct marginViewInfo[]",
+                  "name": "margin_infos",
+                  "type": "tuple[]"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "margin_size",
+                  "type": "uint256"
                 }
               ],
               "internalType": "struct providerInfo",
@@ -1955,6 +2080,19 @@ var ProviderFactoryABI = `[
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getPunishAddress",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1963,6 +2101,19 @@ var ProviderFactoryABI = `[
         }
       ],
       "name": "getPunishAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPunishLength",
       "outputs": [
         {
           "internalType": "uint256",
@@ -2163,6 +2314,19 @@ var ProviderFactoryABI = `[
     },
     {
       "inputs": [],
+      "name": "punish_item_address",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "punish_percent",
       "outputs": [
         {
@@ -2211,6 +2375,19 @@ var ProviderFactoryABI = `[
         }
       ],
       "name": "recoverResource",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "provider",
+          "type": "address"
+        }
+      ],
+      "name": "removeProviderPunishList",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2320,7 +2497,13 @@ var ProviderFactoryABI = `[
       "type": "function"
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        }
+      ],
       "name": "withdrawMargin",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -2344,7 +2527,7 @@ const DevMappingPosition = 2
 
 var (
 	/*
-		FactoryAdminAddr        = common.HexToAddress("0xce930537a2148B8DC43899ff2E9BcBEE0e801c54")
+		FactoryAdminAddr        = common.HexToAddress("0x7a0BbA5EEbD9B84F46A39A9ffd488b8afB88979d")
 		SysGovContractName      = "governance"
 		AddressListContractName = "address_list"
 		DposFactoryContractName = "dpos_factory"
@@ -2356,15 +2539,24 @@ var (
 		// SysGovToAddr is the To address for the system governance transaction, NOT contract address
 		SysGovToAddr = common.HexToAddress("0x000000000000000000000000000000000000cccc")
 	*/
-	ValidatorFactoryAdminAddr    = common.HexToAddress("0xce930537a2148B8DC43899ff2E9BcBEE0e801c54")
-	AddressListContractName      = "address_list"
-	AddressListContractAddr      = common.HexToAddress("0x000000000000000000000000000000000000c001")
-	AddressListContractAdminAddr = common.HexToAddress("0xce930537a2148B8DC43899ff2E9BcBEE0e801c54")
-	ValidatorFactoryContractName = "validator_factory"
-	ValidatorFactoryContractAddr = common.HexToAddress("0x000000000000000000000000000000000000c002")
-	ProviderFactoryContractName  = "provider_factory"
-	ProviderFactoryContractAddr  = common.HexToAddress("0x000000000000000000000000000000000000C003")
-	abiMap                       map[string]abi.ABI
+	ValidatorFactoryAdminAddr     = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+	ValidatorFactoryTestAdminAddr = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+	ValidatorFactoryDevAdminAddr  = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+
+	AddressListContractName = "address_list"
+	AddressListContractAddr = common.HexToAddress("0x000000000000000000000000000000000000c001")
+
+	AddressListContractAdminAddr     = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+	AddressListTestContractAdminAddr = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+	AddressListDevContractAdminAddr  = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+
+	ValidatorFactoryContractName   = "validator_factory"
+	ValidatorFactoryContractAddr   = common.HexToAddress("0x000000000000000000000000000000000000c002")
+	ProviderFactoryContractName    = "provider_factory"
+	ProviderFactoryContractAddr    = common.HexToAddress("0x000000000000000000000000000000000000C003")
+	ValidatorFactoryPunishItemAddr = common.HexToAddress("0x000000000000000000000000000000000000c004")
+	ProviderFactoryPunishItemAddr  = common.HexToAddress("0x000000000000000000000000000000000000C005")
+	abiMap                         map[string]abi.ABI
 )
 
 func init() {
@@ -2394,7 +2586,28 @@ func GetInteractiveABI() map[string]abi.ABI {
 
 	return abiMap
 }
-
+func GetValidatorAdmin(chainId *big.Int) common.Address {
+	if chainId.Cmp(params.MainnetChainConfig.ChainID) == 0 {
+		return ValidatorFactoryAdminAddr
+	} else if chainId.Cmp(params.TestnetChainConfig.ChainID) == 0 {
+		return ValidatorFactoryTestAdminAddr
+	} else if chainId.Cmp(params.DevnetChainConfig.ChainID) == 0 {
+		return ValidatorFactoryDevAdminAddr
+	} else {
+		return ValidatorFactoryAdminAddr
+	}
+}
+func GetAddressListAdmin(chainId *big.Int) common.Address {
+	if chainId.Cmp(params.MainnetChainConfig.ChainID) == 0 {
+		return AddressListContractAdminAddr
+	} else if chainId.Cmp(params.TestnetChainConfig.ChainID) == 0 {
+		return AddressListTestContractAdminAddr
+	} else if chainId.Cmp(params.DevnetChainConfig.ChainID) == 0 {
+		return AddressListDevContractAdminAddr
+	} else {
+		return AddressListContractAdminAddr
+	}
+}
 func GetValidatorAddr(blockNum *big.Int, config *params.ChainConfig) *common.Address {
 	if config.IsRedCoast(blockNum) {
 		return &ValidatorFactoryContractAddr

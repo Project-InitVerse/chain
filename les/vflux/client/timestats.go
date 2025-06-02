@@ -21,8 +21,8 @@ import (
 	"math"
 	"time"
 
-	"PureChain/les/utils"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/les/utils"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 const (

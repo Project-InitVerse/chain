@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 func TestBytesPadding(t *testing.T) {

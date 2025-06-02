@@ -21,17 +21,17 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/light"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 const (

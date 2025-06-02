@@ -20,9 +20,9 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/signer/core"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/signer/core"
 )
 
 func mixAddr(a string) (*common.MixedcaseAddress, error) {

@@ -20,9 +20,9 @@ import (
 	"crypto/rand"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // largeNumber returns a very large big.Int.

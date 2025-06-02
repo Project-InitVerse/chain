@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/tests/fuzzers/les"
+	"github.com/Project-InitVerse/chain/tests/fuzzers/les"
 )
 
 func main() {

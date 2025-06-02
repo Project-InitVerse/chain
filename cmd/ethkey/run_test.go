@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"PureChain/internal/cmdtest"
+	"github.com/Project-InitVerse/chain/internal/cmdtest"
 	"github.com/docker/docker/pkg/reexec"
 )
 

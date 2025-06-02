@@ -25,19 +25,19 @@ import (
 	"math/big"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/systemcontracts"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/systemcontracts"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -249,6 +249,9 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.MainnetChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
+	case ghash == params.DevnetGenesisHash:
+		return params.DevnetChainConfig
+
 	//case ghash == params.TestnetGenesisHash:
 	//	return params.TestnetChainConfig
 	default:
@@ -343,8 +346,8 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      0,
-		Timestamp:  0x5fc58968,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e9f0b3bd1dc6c7b45cc79e25fc137ad4cc458f6773c20c4b7aae3d19eb66decf4b53e4b4cd1bf57a9da829429c3b4ca01b124f5459aa02e16ede4193ddf0b34dc25afc45d73daaee709837ee3286f032f5c62635a788a9d6259c75a93f1a66d6e44276d90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		Timestamp:  0x6772c380,
+		ExtraData:  hexutil.MustDecode("0x"),
 		GasLimit:   0x280de80,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(mainnetAllocData),
@@ -354,11 +357,21 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Timestamp:  0x5fc58968,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000e9f0b3bd1dc6c7b45cc79e25fc137ad4cc458f6773c20c4b7aae3d19eb66decf4b53e4b4cd1bf57a9da829429c3b4ca01b124f5459aa02e16ede4193ddf0b34dc25afc45d73daaee709837ee3286f0320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		Timestamp:  0x65825268,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000aacac4f5763dfb214a84f93e76595f3ca578b10d8d35f95ee6c8b6ee68629d89e8ec330439027682e1303e4f300aea48a642cb680115f08060baac8415eff34389eb6cb5dfaac6439358e77db0aea3677c3d6c3ea68aa16e3681c2074ce1b74b38f08c8e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   0x280de80,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(testnetAllocData),
+	}
+}
+func DefaultDevnetGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.DevnetChainConfig,
+		Timestamp:  0x5fc58968,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000aacac4f5763dfb214a84f93e76595f3ca578b10d8d35f95ee6c8b6ee68629d89e8ec330439027682e1303e4f300aea48a642cb680115f08060baac8415eff34389eb6cb5dfaac6439358e77db0aea3677c3d6c3ea68aa16e3681c2074ce1b74b38f08c8e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   0x280de80,
+		Difficulty: big.NewInt(1),
+		Alloc:      decodePrealloc(devnetAllocData),
 	}
 }
 

@@ -19,9 +19,9 @@ package simulations
 import (
 	"testing"
 
-	"PureChain/node"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/simulations/adapters"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/simulations/adapters"
 )
 
 func newTestNetwork(t *testing.T, nodeCount int) (*Network, []enode.ID) {

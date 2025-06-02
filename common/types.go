@@ -29,7 +29,7 @@ import (
 	"reflect"
 	"strings"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -44,7 +44,7 @@ const (
 var (
 	hashT       = reflect.TypeOf(Hash{})
 	addressT    = reflect.TypeOf(Address{})
-	AddressType = 1 // 1 0x address 2 U4 address
+	AddressType = 1 // 1 0x address 2 I4 address
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
@@ -217,7 +217,7 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 // HexToAddress returns Address with byte values of s.
 // If s is larger than len(h), s will be cropped from the left.
 func HexToAddress(s string) Address {
-	if strings.HasPrefix(s, "U4") {
+	if strings.HasPrefix(s, "I4") {
 		return BytesToAddress(FromHex(string(base58.Decode(s[2:]))))
 	} else {
 		return BytesToAddress(FromHex(s))
@@ -230,7 +230,7 @@ func IsHexAddress(s string) bool {
 	if has0xPrefix(s) {
 		s = s[2:]
 	}
-	if hasU4Prefix(s) {
+	if hasI4Prefix(s) {
 		decodeData := base58.Decode(s[2:])
 
 		return len(decodeData) == 2*AddressLength && isHex(string(decodeData))
@@ -243,6 +243,9 @@ func (a Address) Bytes() []byte { return a[:] }
 
 // Hash converts an address to a hash by left-padding it with zeros.
 func (a Address) Hash() Hash { return BytesToHash(a[:]) }
+
+// Big converts an address to a big integer.
+func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // Hex returns an EIP55-compliant hex string representation of the address.
 func (a Address) Hex() string {
@@ -265,7 +268,7 @@ func (a *Address) formatString() string {
 		return string(a.checksumHex())
 	} else {
 		res := base58.Encode(a.checksumHex()[2:])
-		return "U4" + res
+		return "I4" + res
 	}
 
 }

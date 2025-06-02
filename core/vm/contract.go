@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/holiman/uint256"
 )
 

@@ -24,11 +24,11 @@ import (
 	"net"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/crypto"
-	"PureChain/p2p/discover/v5wire"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/discover/v5wire"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
 )
 
 // readError represents an error during packet reading.

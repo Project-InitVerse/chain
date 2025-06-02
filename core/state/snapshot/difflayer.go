@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/rlp"
 	bloomfilter "github.com/holiman/bloomfilter/v2"
 )
 
@@ -258,6 +258,8 @@ func (dl *diffLayer) Root() common.Hash {
 
 // Parent returns the subsequent layer of a diff layer.
 func (dl *diffLayer) Parent() snapshot {
+	dl.lock.RLock()
+	defer dl.lock.RUnlock()
 	return dl.parent
 }
 

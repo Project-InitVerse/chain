@@ -29,8 +29,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"PureChain/log"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/rs/cors"
 )
 

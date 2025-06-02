@@ -21,9 +21,9 @@ import (
 	"errors"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // WaitMined waits for tx to be mined on the blockchain.

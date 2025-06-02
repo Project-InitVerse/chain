@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // MarshalJSON marshals as JSON.

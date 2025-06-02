@@ -25,9 +25,9 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/internal/testlog"
-	"PureChain/log"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/internal/testlog"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )

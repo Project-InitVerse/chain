@@ -7,9 +7,9 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 var _ = (*vmExecMarshaling)(nil)

@@ -17,11 +17,13 @@
 package graphql
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
-	"PureChain/internal/ethapi"
-	"PureChain/node"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/node"
 	"github.com/graph-gophers/graphql-go"
 )
 
@@ -39,8 +41,11 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
 
-	response := h.Schema.Exec(r.Context(), params.Query, params.OperationName, params.Variables)
+	response := h.Schema.Exec(ctx, params.Query, params.OperationName, params.Variables)
+	//response := h.Schema.Exec(r.Context(), params.Query, params.OperationName, params.Variables)
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -21,9 +21,9 @@ import (
 	"errors"
 	"os"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/log"
 	bloomfilter "github.com/holiman/bloomfilter/v2"
 )
 

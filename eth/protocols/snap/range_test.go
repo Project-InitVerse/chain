@@ -19,7 +19,7 @@ package snap
 import (
 	"testing"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Tests that given a starting hash and a density, the hash ranger can correctly

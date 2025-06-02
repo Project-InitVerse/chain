@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/cmd/utils"
-	"PureChain/console"
-	"PureChain/node"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/console"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

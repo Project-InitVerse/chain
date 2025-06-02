@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/tests/fuzzers/stacktrie"
+	"github.com/Project-InitVerse/chain/tests/fuzzers/stacktrie"
 )
 
 func main() {

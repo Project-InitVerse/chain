@@ -21,10 +21,10 @@ import (
 	"math/rand"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/p2p"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/rlp"
 	mapset "github.com/deckarep/golang-set"
 )
 

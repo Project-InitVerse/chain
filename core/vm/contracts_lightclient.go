@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"PureChain/core/vm/lightclient"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/core/vm/lightclient"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 const (

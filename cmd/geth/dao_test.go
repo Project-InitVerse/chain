@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Genesis block for nodes which don't care about the DAO fork (i.e. not configured)

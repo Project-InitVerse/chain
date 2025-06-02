@@ -25,13 +25,13 @@ import (
 	"os"
 	"strconv"
 
-	"PureChain/crypto"
-	"PureChain/log"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/gorilla/websocket"
 )
@@ -42,7 +42,6 @@ import (
 // * SimNode    - An in-memory node
 // * ExecNode   - A child process node
 // * DockerNode - A Docker container node
-//
 type Node interface {
 	// Addr returns the node's address (e.g. an Enode URL)
 	Addr() []byte

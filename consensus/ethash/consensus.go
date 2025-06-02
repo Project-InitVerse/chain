@@ -24,16 +24,16 @@ import (
 	"runtime"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/math"
-	"PureChain/consensus"
-	"PureChain/consensus/misc"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/misc"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/crypto/sha3"
 )
@@ -70,8 +70,9 @@ var (
 // codebase, inherently breaking if the engine is swapped out. Please put common
 // error types into the consensus package.
 var (
-	errOlderBlockTime    = errors.New("timestamp older than parent")
-	errTooManyUncles     = errors.New("too many uncles")
+	errOlderBlockTime = errors.New("timestamp older than parent")
+	//errTooManyUncles     = errors.New("too many uncles")
+	errNotSupportUncles  = errors.New("not support uncles")
 	errDuplicateUncle    = errors.New("duplicate uncle")
 	errUncleIsAncestor   = errors.New("uncle is ancestor")
 	errDanglingUncle     = errors.New("uncle's parent is not ancestor")
@@ -194,7 +195,7 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	}
 	// Verify that there are at most 2 uncles included in this block
 	if len(block.Uncles()) > maxUncles {
-		return errTooManyUncles
+		return errNotSupportUncles
 	}
 	if len(block.Uncles()) == 0 {
 		return nil
@@ -504,6 +505,7 @@ var DynamicDifficultyCalculator = makeDifficultyCalculator
 // to make remote mining fast.
 func (ethash *Ethash) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, fulldag bool) error {
 	// If we're running a fake PoW, accept any seal as valid
+	fmt.Println("verifySeal\n\n\n\n")
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		time.Sleep(ethash.fakeDelay)
 		if ethash.fakeFail == header.Number.Uint64() {
@@ -579,7 +581,7 @@ func (ethash *Ethash) Prepare(chain consensus.ChainHeaderReader, header *types.H
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state on the header
 func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header,
-	receipts *[]*types.Receipt, _ *[]*types.Transaction, _ *uint64) (err error) {
+	receipts *[]*types.Receipt, _ *[]*types.Transaction, _ *uint64, _ bool) (err error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header, uncles)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -591,7 +593,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.
 func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
 	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
 
-	ethash.Finalize(chain, header, state, &txs, uncles, nil, nil, nil)
+	ethash.Finalize(chain, header, state, &txs, uncles, nil, nil, nil, false)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), receipts, nil

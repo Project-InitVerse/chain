@@ -23,12 +23,12 @@ import (
 	"io"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	vfc "PureChain/les/vflux/client"
-	"PureChain/p2p/enode"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	vfc "github.com/Project-InitVerse/chain/les/vflux/client"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Constants to match up protocol versions and messages

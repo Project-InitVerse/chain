@@ -26,8 +26,8 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"

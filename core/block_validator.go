@@ -17,15 +17,12 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-
-	"PureChain/consensus"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and
@@ -133,7 +130,19 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 		},
 		func() error {
 			if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
-				statedb.IterativeDump(true, true, true, json.NewEncoder(os.Stdout))
+				transaction_str := ""
+				for _, oneTrx := range block.Transactions() {
+					txJson, err := oneTrx.MarshalJSON()
+					if err == nil {
+						transaction_str += string(txJson) + "\n"
+					} else {
+						transaction_str += "marshal json failed tx hash " + string(oneTrx.Hash().String()) + "\n"
+					}
+
+				}
+				//err_str := fmt.Errorf("invalid merkle root block number%v blockVal:%v transaction %v", header.Number.String(), header.Coinbase.String(), transaction_str)
+				//log.Error("invalid merkle root block", "error", err_str)
+				//statedb.IterativeDump(true, true, true, json.NewEncoder(os.Stdout))
 				return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 			} else {
 				return nil

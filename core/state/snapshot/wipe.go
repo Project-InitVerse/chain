@@ -20,11 +20,11 @@ import (
 	"bytes"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 // wipeSnapshot starts a goroutine to iterate over the entire key-value database

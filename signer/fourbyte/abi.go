@@ -23,8 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"PureChain/accounts/abi"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // decodedCallData is an internal type to represent a method call parsed according

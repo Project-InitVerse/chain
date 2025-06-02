@@ -21,13 +21,13 @@ import (
 	"math/big"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

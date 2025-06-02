@@ -19,9 +19,9 @@ package eth
 import (
 	"time"
 
-	"PureChain/common/bitutil"
-	"PureChain/common/gopool"
-	"PureChain/core/rawdb"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/core/rawdb"
 )
 
 const (

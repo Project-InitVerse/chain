@@ -18,45 +18,45 @@
 package eth
 
 import (
-	"PureChain/consensus/dpos"
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
 	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/consensus/clique"
-	"PureChain/consensus/parlia"
-	"PureChain/core"
-	"PureChain/core/bloombits"
-	"PureChain/core/rawdb"
-	"PureChain/core/state/pruner"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/eth/downloader"
-	"PureChain/eth/ethconfig"
-	"PureChain/eth/filters"
-	"PureChain/eth/gasprice"
-	"PureChain/eth/protocols/eth"
-	"PureChain/eth/protocols/snap"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/miner"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/dnsdisc"
-	"PureChain/p2p/enode"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/bloombits"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state/pruner"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/eth/filters"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/eth/protocols/snap"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/dnsdisc"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -128,15 +128,19 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	// Transfer mining-related config to the ethash config.
 	ethashConfig := config.Ethash
 	ethashConfig.NotifyFull = config.Miner.NotifyFull
-
+	inihashConfig := config.Inihash
+	inihashConfig.NotifyFull = config.Miner.NotifyFull
 	// Assemble the Ethereum object
 	chainDb, err := stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "eth/db/chaindata/", false)
 	if err != nil {
 		return nil, err
 	}
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.OverrideBerlin)
-	chainConfig.Dpos.ChallengeCommitUrl = config.PorChallengeCommitUrl
-	chainConfig.Dpos.Por = config.Por
+	if chainConfig.Dpos != nil {
+		chainConfig.Dpos.ChallengeCommitUrl = config.PorChallengeCommitUrl
+		chainConfig.Dpos.Por = config.Por
+	}
+
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -157,7 +161,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      core.NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 		p2pServer:         stack.Server(),
-		posEtherbase:      append(make([]common.Address, len(config.Miner.PosEtherbase)), config.Miner.PosEtherbase...),
+		posEtherbase:      append(make([]common.Address, 0), config.Miner.PosEtherbase...),
 	}
 
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil}
@@ -165,7 +169,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		log.Info("Unprotected transactions allowed")
 	}
 	ethAPI := ethapi.NewPublicBlockChainAPI(eth.APIBackend)
-	eth.engine = ethconfig.CreateConsensusEngine(stack, chainConfig, &ethashConfig, config.Miner.Notify, config.Miner.Noverify, chainDb, ethAPI, genesisHash)
+	eth.engine = ethconfig.CreateConsensusEngine(stack, chainConfig, &ethashConfig, &inihashConfig, config.Miner.Notify, config.Miner.Noverify, chainDb, ethAPI, genesisHash)
 
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 	var dbVer = "<nil>"

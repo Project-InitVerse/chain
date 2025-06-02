@@ -29,11 +29,11 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/event"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/simulations/adapters"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/simulations/adapters"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
 )

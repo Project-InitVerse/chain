@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/p2p"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 type gethrpc struct {

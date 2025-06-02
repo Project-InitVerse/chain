@@ -1,14 +1,14 @@
 package dpos
 
 import (
-	"PureChain"
-	"PureChain/metrics"
 	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/metrics"
 	"io"
 	"math"
 	"math/big"
@@ -22,30 +22,30 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/sha3"
 
-	_ "PureChain"
-	"PureChain/accounts"
-	"PureChain/accounts/abi"
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/consensus/dpos/systemcontract"
-	"PureChain/consensus/dpos/vmcaller"
-	"PureChain/consensus/misc"
-	"PureChain/core"
-	"PureChain/core/forkid"
-	"PureChain/core/state"
-	"PureChain/core/systemcontracts"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/rpc"
-	"PureChain/trie"
+	_ "github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/dpos/systemcontract"
+	"github.com/Project-InitVerse/chain/consensus/dpos/vmcaller"
+	"github.com/Project-InitVerse/chain/consensus/misc"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/systemcontracts"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/rpc"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 const (
@@ -72,11 +72,11 @@ const (
 	doubleDistributeRound = 200         // Double Number of distribute round
 	blockDistributeRewrad = 61969993482 // one block origin reward
 	//todo change year blockCount for mainnet
-	yearBlockCount = 24 * 60 * 10 // one year generate block count
-	oneTDiv1000    = 1073741824   // 1024*1024*1024*1024/1000
-	oneGDiv1000    = 1048576      // 1024*1024*1024/1000
+	yearBlockCount = 365 * 24 * 60 * 10 // one year generate block count
+	oneTDiv1000    = 1073741824         // 1024*1024*1024*1024/1000
+	oneGDiv1000    = 1048576            // 1024*1024*1024/1000
 	//todo change rate for mainnet
-	challengeRate           = 10              // One in 10,000  chance of triggering a challenge
+	challengeRate           = 10000           // One in 10,000  chance of triggering a challenge
 	maxSeedInt              = int64(1) << 62  // maxSeedInt
 	defaultGasLimit         = uint64(1000000) // default 100w gas limit
 	defaultGasPrice         = int64(100)      // default 100 gas price
@@ -102,6 +102,7 @@ var (
 	fourGMem                = big.NewInt(4 * 1024 * 1024 * 1024) // 4G memory
 	challengeProviderMethod = crypto.Keccak256Hash([]byte("challengeProvider(address,uint256,string)")).String()[2:10]
 	challengeFinishMethod   = crypto.Keccak256Hash([]byte("challengeFinish(address,uint256,uint256,uint256,uint8)")).String()[2:10]
+	challengeRevertMethod   = crypto.Keccak256Hash([]byte("validatorNotSubmitResult(address)")).String()[2:10]
 )
 
 type blacklistDirection uint
@@ -271,6 +272,19 @@ type poaResource struct {
 	StorageCount *big.Int
 }
 
+type marginViewInfo struct {
+	// provider margin amount
+	MarginAmount *big.Int
+	// provider margin has withdrawn or not
+	Withdrawn bool
+	// provider margin time
+	MarginTime *big.Int
+	// provider margin lock time
+	MarginLockTime *big.Int
+	// provider margin remain amount
+	RemainMarginAmount *big.Int
+}
+
 // providerInfo is an auto generated low-level Go binding around an user-defined struct.
 type providerInfo struct {
 	Total             poaResource
@@ -283,6 +297,8 @@ type providerInfo struct {
 	Info              string
 	LastChallengeTime *big.Int
 	LastMarginTime    *big.Int
+	MarginInfos       []marginViewInfo
+	MarginSize        *big.Int
 }
 
 func isToSystemContract(to common.Address) bool {
@@ -430,7 +446,7 @@ func (p *Dpos) IsSystemTransaction(tx *types.Transaction, header *types.Header) 
 		return false, errors.New("UnAuthorized transaction")
 	}
 
-	if sender == header.Coinbase && isToSystemContract(*tx.To()) && tx.GasPrice().Cmp(big.NewInt(0)) == 0 && !strings.HasPrefix(hex.EncodeToString(tx.Data()), challengeProviderMethod) && !strings.HasPrefix(hex.EncodeToString(tx.Data()), challengeFinishMethod) {
+	if sender == header.Coinbase && isToSystemContract(*tx.To()) && tx.GasPrice().Cmp(big.NewInt(0)) == 0 && !strings.HasPrefix(hex.EncodeToString(tx.Data()), challengeProviderMethod) && !strings.HasPrefix(hex.EncodeToString(tx.Data()), challengeFinishMethod) && !strings.HasPrefix(hex.EncodeToString(tx.Data()), challengeRevertMethod) {
 		return true, nil
 	}
 	return false, nil
@@ -877,20 +893,26 @@ func (p *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
 func (p *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
-	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
+	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, isSkip bool) error {
 	// Initialize all system contracts at block 1.
 	if header.Number.Cmp(common.Big1) == 0 {
 		if err := p.initializeSystemContracts(chain, header, state); err != nil {
-			log.Error("Initialize system contracts failed", "err", err)
+			log.Error("Initialize system contracts failed", "block", header.Number.String(), "err", err)
 			return err
 		}
 	}
+	//tmp_root := state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("finalize root hash1", "block", header.Number.String(), "hash", tmp_root.String())
 	if err := p.tryPunishValidator(chain, header, state); err != nil {
 		return err
 	}
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("finalize root hash2", "block", header.Number.String(), "hash", tmp_root.String())
 	if err := p.punishProvider(chain, header, state); err != nil {
 		return err
 	}
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("finalize root hash3", "block", header.Number.String(), "hash", tmp_root.String())
 	/*
 		if header.Difficulty.Cmp(diffInTurn) != 0 {
 			if err := p.tryPunishValidator(chain, header, state); err != nil {
@@ -914,7 +936,8 @@ func (p *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 			return err
 		}
 	}
-
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("finalize root hash4", "block", header.Number.String(), "hash", tmp_root.String())
 	//}
 
 	// warn if not in majority fork
@@ -954,6 +977,8 @@ func (p *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 			return errMismatchingEpochValidators
 		}
 	}
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("finalize root hash5", "block", header.Number.String(), "hash", tmp_root.String())
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	//cx := chainContext{Chain: chain, dpos: p}
 	//if header.Number.Cmp(common.Big1) == 0 {
@@ -1014,53 +1039,56 @@ func (p *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 	if err != nil {
 		log.Error("get provider info failed", "error", err.Error())
 	}
+	if !isSkip {
+		tmpProvider := common.Address{}
+		totalVote := big.NewInt(0)
+		for _, k := range providerLuckyData {
+			totalVote.Add(totalVote, k.VotingPower)
+		}
+		if totalVote.Cmp(common.Big0) > 0 {
+			parentHeader := chain.GetHeaderByHash(header.ParentHash)
 
-	tmpProvider := common.Address{}
-	totalVote := big.NewInt(0)
-	for _, k := range providerLuckyData {
-		totalVote.Add(totalVote, k.VotingPower)
-	}
-	if totalVote.Cmp(common.Big0) > 0 {
-		parentHeader := chain.GetHeaderByHash(header.ParentHash)
-
-		if parentHeader != nil {
-			calRlp, err := rlp.EncodeToBytes([]interface{}{parentHeader.Root, header.ParentHash, parentHeader.Coinbase, parentHeader.Time})
-			if err != nil {
-				return err
-			}
-
-			calHash := crypto.Keccak256(calRlp)
-			magicNumber := big.NewInt(0).SetBytes(calHash)
-			magicNumber.Mod(magicNumber, totalVote)
-			currentVote := big.NewInt(0)
-			for _, v := range providerLuckyData {
-				currentVote.Add(currentVote, v.VotingPower)
-				if magicNumber.Cmp(currentVote) < 0 {
-					tmpProvider.SetBytes(v.ProviderAddress.Bytes())
-					log.Debug("Check provider", "header Number", header.Number.String(), "provider", v.ProviderAddress, "votepower", v.VotingPower, "currentVote", currentVote)
-					break
+			if parentHeader != nil {
+				calRlp, err := rlp.EncodeToBytes([]interface{}{parentHeader.Root, header.ParentHash, parentHeader.Coinbase, parentHeader.Time})
+				if err != nil {
+					return err
 				}
+
+				calHash := crypto.Keccak256(calRlp)
+				magicNumber := big.NewInt(0).SetBytes(calHash)
+				magicNumber.Mod(magicNumber, totalVote)
+				currentVote := big.NewInt(0)
+				for _, v := range providerLuckyData {
+					currentVote.Add(currentVote, v.VotingPower)
+					if magicNumber.Cmp(currentVote) < 0 {
+						tmpProvider.SetBytes(v.ProviderAddress.Bytes())
+						log.Debug("Check provider", "header Number", header.Number.String(), "provider", v.ProviderAddress, "votepower", v.VotingPower, "currentVote", currentVote)
+						break
+					}
+				}
+				if header.Provider.String() != tmpProvider.String() {
+					log.Error("invalid provider", "provider", header.Provider.String(), "expect provider", tmpProvider.String())
+					return errInvalidProvider
+				}
+
+			} else {
+				log.Debug("header not exist,skip verify", "header number", header.Number)
 			}
+		} else {
+			tmpProvider = common.Address{}
 			if header.Provider.String() != tmpProvider.String() {
 				log.Error("invalid provider", "provider", header.Provider.String(), "expect provider", tmpProvider.String())
 				return errInvalidProvider
 			}
 
-		} else {
-			log.Debug("header not exist,skip verify", "header number", header.Number)
+		}
+		if header.TeamRate != realTeamRate || header.ValidatorRate != realValRate {
+			return errInvalidDistributeRate
 		}
 	} else {
-		tmpProvider = common.Address{}
-		if header.Provider.String() != tmpProvider.String() {
-			log.Error("invalid provider", "provider", header.Provider.String(), "expect provider", tmpProvider.String())
-			return errInvalidProvider
-		}
-
+		log.Info("skip state unused check!")
 	}
 
-	if header.TeamRate != realTeamRate || header.ValidatorRate != realValRate {
-		return errInvalidDistributeRate
-	}
 	//if header.Difficulty.Cmp(diffInTurn) != 0 {
 	//		spoiledVal := snap.supposeValidator()
 	//		signedRecently := false
@@ -1094,7 +1122,7 @@ func (p *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 	return nil
 }
 
-func (p *Dpos) TryCreateChallenge(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Transaction, uint64, common.Address, error) {
+func (p *Dpos) TryCreateChallenge(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (*types.Transaction, uint64, common.Address, error, int) {
 	//cx := chainContext{Chain: chain, dpos: p}
 
 	if chain.Config().Dpos.Por == true {
@@ -1103,8 +1131,8 @@ func (p *Dpos) TryCreateChallenge(chain consensus.ChainHeaderReader, header *typ
 			if rand.Intn(100000) < challengeRate {
 				chooseProvider, isPunish, err := p.getCanChallengeProvider(chain, header)
 				if err == nil && chooseProvider != nil {
-
-					if p.whetherCanPor(chain, header, *chooseProvider, isPunish) {
+					whetherCan := p.whetherCanPor(chain, header, *chooseProvider, isPunish)
+					if whetherCan == 1 {
 						seed := uint64(rand.Int63n(maxSeedInt))
 						seedBytes := [8]byte{}
 						binary.LittleEndian.PutUint64(seedBytes[:], seed)
@@ -1113,14 +1141,21 @@ func (p *Dpos) TryCreateChallenge(chain consensus.ChainHeaderReader, header *typ
 						if err != nil {
 							log.Error("unexcepted challenge error", "errors", err.Error())
 						}
-						return tx, seed, *chooseProvider, err
+						return tx, seed, *chooseProvider, err, 1
+					} else if whetherCan == -1 {
+						tx, err := p.createNotSubmitTransaction(*chooseProvider, state, header)
+						if err != nil {
+							log.Error("unexcepted challenge error", "errors", err.Error())
+						}
+						fmt.Println("create not submit transaction")
+						return tx, 0, *chooseProvider, err, 2
 					}
 
 				}
 			}
 		}
 	}
-	return nil, 0, common.Address{}, errors.New("not in challenge round")
+	return nil, 0, common.Address{}, errors.New("not in challenge round"), 1
 }
 
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
@@ -1139,21 +1174,27 @@ func (p *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 	}
+	//tmp_root := state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("FinalizeAndAssemble root hash1", "block", header.Number.String(), "hash", tmp_root.String())
 	if err := p.tryPunishValidator(chain, header, state); err != nil {
 
 		panic(err)
 	}
-
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("FinalizeAndAssemble root hash2", "block", header.Number.String(), "hash", tmp_root.String())
 	if err := p.punishProvider(chain, header, state); err != nil {
 		panic(err)
 	}
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("FinalizeAndAssemble root hash3", "block", header.Number.String(), "hash", tmp_root.String())
 	if header.Number.Cmp(common.Big3) > 0 {
 		if err := p.trySendBlockReward(chain, header, state); err != nil {
 
 			panic(err)
 		}
 	}
-
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("FinalizeAndAssemble root hash4", "block", header.Number.String(), "hash", tmp_root.String())
 	//}
 
 	// do epoch thing at the end, because it will update active validators
@@ -1163,6 +1204,8 @@ func (p *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 	}
+	//tmp_root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	//log.Error("FinalizeAndAssemble root hash5", "block", header.Number.String(), "hash", tmp_root.String())
 
 	//handle system governance Proposal
 	//
@@ -1322,7 +1365,7 @@ func (p *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 			if lastReward.Cmp(common.Big0) > 0 {
 				if (yestHeader.Provider != common.Address{}) {
 					state.AddBalance(yestHeader.Provider, lastReward)
-					state.AddLockBalance(yestHeader.Provider, teamPartReward)
+					state.AddLockBalance(yestHeader.Provider, lastReward)
 				}
 				state.AddBalance(TeamAddress, teamPartReward)
 				state.AddLockBalance(TeamAddress, teamPartReward)
@@ -1330,11 +1373,11 @@ func (p *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 				state.AddLockBalance(yestHeader.Coinbase, validatorPartReward)
 
 			}
-			log.Info("distribute reward ", "teamPartReward", teamPartReward, "validatorPartReward", validatorPartReward, "lastReward", lastReward, "lastHeader.Provider", yestHeader.Provider, "lastHeader.Number", yestBlockNumber)
+			//log.Info("distribute reward ", "teamPartReward", teamPartReward, "validatorPartReward", validatorPartReward, "lastReward", lastReward, "lastHeader.Provider", yestHeader.Provider, "lastHeader.Number", yestBlockNumber)
 			for i := 0; i < distributeRound; i++ {
 				lastNumber := header.Number.Uint64() - common.BigOneDayUint*uint64(i+2)
 				if lastNumber > header.Number.Uint64() || (lastNumber == 0) {
-					log.Info("max pay count", "count", i, "header.Number.Uint64()", header.Number.Uint64())
+					//log.Info("max pay count", "count", i, "header.Number.Uint64()", header.Number.Uint64())
 					break
 				}
 				lastHeader := chain.GetHeaderByNumber(lastNumber)
@@ -1342,9 +1385,9 @@ func (p *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 				if lastHeader != nil {
 					reward = getBlockReward(lastNumber)
 					lastReward = new(big.Int).Div(reward, big.NewInt(doubleDistributeRound))
-					teamPartReward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(reward, new(big.Int).SetUint64(yestHeader.TeamRate)), big.NewInt(doubleAllPercent)), big.NewInt(distributeRound))
+					teamPartReward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(reward, new(big.Int).SetUint64(lastHeader.TeamRate)), big.NewInt(doubleAllPercent)), big.NewInt(distributeRound))
 					lastReward.Sub(lastReward, teamPartReward)
-					validatorPartReward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(reward, new(big.Int).SetUint64(yestHeader.ValidatorRate)), big.NewInt(doubleAllPercent)), big.NewInt(distributeRound))
+					validatorPartReward := new(big.Int).Div(new(big.Int).Div(new(big.Int).Mul(reward, new(big.Int).SetUint64(lastHeader.ValidatorRate)), big.NewInt(doubleAllPercent)), big.NewInt(distributeRound))
 					lastReward.Sub(lastReward, validatorPartReward)
 					if lastReward.Cmp(common.Big0) > 0 {
 						if (lastHeader.Provider != common.Address{}) {
@@ -1457,6 +1500,33 @@ func (p *Dpos) CreateChallengeFinish(validator common.Address, provider common.A
 	return expectedTx, nil
 }
 
+func (p *Dpos) createNotSubmitTransaction(provider common.Address, state *state.StateDB, header *types.Header) (*types.Transaction, error) {
+
+	// method
+	method := "validatorNotSubmitResult"
+
+	// get packed data
+	data, err := p.abi[systemcontract.ValidatorFactoryContractName].Pack(method,
+		provider)
+	if err != nil {
+		log.Error("Unable to pack tx for deposit", "error", err)
+		return nil, err
+	}
+	// get system message
+	msg := p.getSystemMessage(header.Coinbase, systemcontract.ValidatorFactoryContractAddr, data, common.Big0)
+	// apply message
+	nonce := state.GetNonce(msg.From())
+	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), defaultGasLimit, msg.GasPrice(), msg.Data())
+	//expectedHash := p.signer.Hash(expectedTx)
+	expectedTx, err = p.signTxFns[header.Coinbase](accounts.Account{Address: msg.From()}, expectedTx, p.chainConfig.ChainID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return expectedTx, nil
+
+}
 func (p *Dpos) createChallengeTransaction(provider common.Address, seedHash *big.Int, state *state.StateDB, header *types.Header) (*types.Transaction, error) {
 
 	// method
@@ -1527,13 +1597,13 @@ func (p *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 
 		{systemcontract.ValidatorFactoryContractAddr, func() ([]byte, error) {
 
-			return p.abi[systemcontract.ValidatorFactoryContractName].Pack(method, genesisValidators, systemcontract.ValidatorFactoryAdminAddr)
+			return p.abi[systemcontract.ValidatorFactoryContractName].Pack(method, genesisValidators, systemcontract.GetValidatorAdmin(p.chainConfig.ChainID))
 		}},
 		{systemcontract.ProviderFactoryContractAddr, func() ([]byte, error) {
-			return p.abi[systemcontract.ProviderFactoryContractName].Pack(method, systemcontract.ValidatorFactoryAdminAddr)
+			return p.abi[systemcontract.ProviderFactoryContractName].Pack(method, systemcontract.GetValidatorAdmin(p.chainConfig.ChainID))
 		}},
 		{systemcontract.AddressListContractAddr, func() ([]byte, error) {
-			return p.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.AddressListContractAdminAddr)
+			return p.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.GetAddressListAdmin(p.chainConfig.ChainID))
 		}},
 
 		/*
@@ -1734,29 +1804,7 @@ func (p *Dpos) getProviderInfo(chain consensus.ChainHeaderReader, header *types.
 	if err != nil {
 		return []VoteInfo{}, err
 	}
-	//if ProviderFactoryAddr == (common.Address{}) {
-	//	method := "providerFactory"
-	//	data, err := p.abi[systemcontract.ValidatorFactoryContractName].Pack(method)
-	//	if err != nil {
-	//		log.Error("Can't pack data for providerFactory", "error", err)
-	//		return []VoteInfo{}, err
-	//	}
-	//
-	//	msg := types.NewMessage(header.Coinbase, systemcontract.GetValidatorAddr(parent.Number, p.chainConfig), 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
-	//	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, p), p.chainConfig)
-	//	if err != nil {
-	//		return []VoteInfo{}, err
-	//	}
-	//	ret, err := p.abi[systemcontract.ValidatorFactoryContractName].Unpack(method, result)
-	//	if err != nil {
-	//		return []VoteInfo{}, err
-	//	}
-	//	ProviderFactoryAddr = ret[0].(common.Address)
-	//
-	//}
-	//if ProviderFactoryAddr == (common.Address{}) {
-	//	return []VoteInfo{}, nil
-	//}
+
 	method := "getProviderInfo"
 	data, err := p.abi[systemcontract.ProviderFactoryContractName].Pack(method, big.NewInt(0), big.NewInt(0))
 	if err != nil {
@@ -1804,7 +1852,13 @@ func (p *Dpos) getProviderInfo(chain consensus.ChainHeaderReader, header *types.
 		if oneProvider.Info.State != Running {
 			continue
 		}
-		if oneProvider.MarginAmount.Cmp(new(big.Int).Mul(StakeThreshold, oneProvider.Info.Total.CpuCount)) < 0 {
+		handleCpuCount := new(big.Int).Div(oneProvider.Info.Total.CpuCount, common.Big1000)
+		handleMemory := new(big.Int).Div(oneProvider.Info.Total.MemoryCount, fourGMem)
+		handleCount := handleCpuCount
+		if handleMemory.Cmp(handleCpuCount) < 0 {
+			handleCount = handleMemory
+		}
+		if oneProvider.MarginAmount.Cmp(new(big.Int).Mul(StakeThreshold, handleCount)) < 0 {
 			continue
 		}
 
@@ -1917,20 +1971,20 @@ func (p *Dpos) getCanChallengeProvider(chain consensus.ChainHeaderReader, header
 	return &rets[index], ok, err
 }
 
-func (p *Dpos) whetherCanPor(chain consensus.ChainHeaderReader, header *types.Header, providerAddr common.Address, isPunish bool) bool {
+func (p *Dpos) getMaxChallengeTime(chain consensus.ChainHeaderReader, header *types.Header) *big.Int {
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
-		return false
+		return big.NewInt(720)
 	}
 	statedb, err := p.stateFn(parent.Root)
 	if err != nil {
-		return false
+		return big.NewInt(720)
 	}
-	method := "getProviderChallengeInfo"
-	data, err := p.abi[systemcontract.ValidatorFactoryContractName].Pack(method, providerAddr)
+	method := "max_challenge_time"
+	data, err := p.abi[systemcontract.ValidatorFactoryContractName].Pack(method)
 	if err != nil {
 		log.Error("Can't pack data for getProviderChallengeInfo", "error", err)
-		return false
+		return big.NewInt(720)
 	}
 
 	msg := types.NewMessage(header.Coinbase, &(systemcontract.ValidatorFactoryContractAddr), 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
@@ -1938,7 +1992,40 @@ func (p *Dpos) whetherCanPor(chain consensus.ChainHeaderReader, header *types.He
 	// use parent
 	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, p), p.chainConfig)
 	if err != nil {
-		return false
+		return big.NewInt(720)
+	}
+	ret, err := p.abi[systemcontract.ValidatorFactoryContractName].Unpack(method, result)
+	if err != nil {
+		return big.NewInt(720)
+	}
+	maxChallengeTime := *abi.ConvertType(ret[0], new(big.Int)).(*big.Int)
+
+	return &maxChallengeTime
+
+}
+
+func (p *Dpos) whetherCanPor(chain consensus.ChainHeaderReader, header *types.Header, providerAddr common.Address, isPunish bool) int {
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	if parent == nil {
+		return 0
+	}
+	statedb, err := p.stateFn(parent.Root)
+	if err != nil {
+		return 0
+	}
+	method := "getProviderChallengeInfo"
+	data, err := p.abi[systemcontract.ValidatorFactoryContractName].Pack(method, providerAddr)
+	if err != nil {
+		log.Error("Can't pack data for getProviderChallengeInfo", "error", err)
+		return 0
+	}
+
+	msg := types.NewMessage(header.Coinbase, &(systemcontract.ValidatorFactoryContractAddr), 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+
+	// use parent
+	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, p), p.chainConfig)
+	if err != nil {
+		return 0
 	}
 
 	defer func() {
@@ -1953,10 +2040,10 @@ func (p *Dpos) whetherCanPor(chain consensus.ChainHeaderReader, header *types.He
 	// unpack data
 	ret, err := p.abi[systemcontract.ValidatorFactoryContractName].Unpack(method, result)
 	if err != nil {
-		return false
+		return 0
 	}
 	if len(ret) != 1 {
-		return false
+		return 0
 	}
 	var interval time.Duration
 	if isPunish {
@@ -1965,10 +2052,16 @@ func (p *Dpos) whetherCanPor(chain consensus.ChainHeaderReader, header *types.He
 		interval = challengeInterval
 	}
 	challengeInfo := *abi.ConvertType(ret[0], new(providerChallengeInfo)).(*providerChallengeInfo)
-	if time.Now().Sub(time.Unix(challengeInfo.CreateChallengeTime.Int64(), 0)) > interval && challengeInfo.State != Create {
-		return true
+
+	maxChallengeTime := p.getMaxChallengeTime(chain, header)
+	if challengeInfo.State == Create && (time.Now().Sub(time.Unix(challengeInfo.CreateChallengeTime.Int64(), 0))) > time.Second*time.Duration(2*maxChallengeTime.Int64()) {
+		return -1
 	}
-	return false
+
+	if time.Now().Sub(time.Unix(challengeInfo.CreateChallengeTime.Int64(), 0)) > interval && challengeInfo.State != Create {
+		return 1
+	}
+	return 0
 }
 
 /*
@@ -2277,6 +2370,11 @@ func (p *Dpos) PreHandle(chain consensus.ChainHeaderReader, header *types.Header
 	//	//fmt.Println("PreHandle")
 	//	return systemcontract.ApplySystemContractUpgrade(state, header, newChainContext(chain, p), p.chainConfig)
 	//}
+	if header.Number.Cmp(big.NewInt(100000)) > 0 {
+		fmt.Println(header.Number.String())
+		p.chainConfig.ChainID = big.NewInt(100222)
+		p.signer = types.NewEIP155Signer(p.chainConfig.ChainID)
+	}
 	if p.chainConfig.IsBerlin(header.Number) {
 		p.signer = types.NewEIP2930Signer(p.chainConfig.ChainID)
 	}
@@ -2327,26 +2425,27 @@ func (p *Dpos) CanCreate(state consensus.StateReader, addr common.Address, heigh
 func (p *Dpos) ValidateTx(tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
 	// Must use the parent state for current validation,
 	// so we must starting the validation after redCoastBlock
-	if p.chainConfig.ChainID == params.TestnetChainConfig.ChainID {
-
-		m, err := p.getBlacklist(header, parentState)
-		if err != nil {
-			log.Error("can't get blacklist", "err", err)
-			return err
-		}
-		m[systemcontract.ProviderFactoryContractAddr] = DirectionTo
-		m[systemcontract.ValidatorFactoryContractAddr] = DirectionTo
-		m[systemcontract.AddressListContractAddr] = DirectionTo
-		m[systemcontract.ValidatorFactoryAdminAddr] = DirectionTo
-		//if _, exist := m[from]; (!exist) {
-		//	return errors.New("address denied")
-		//}
-		if to := tx.To(); to != nil {
-			if d, exist := m[*to]; !exist || (d == DirectionFrom) {
-				return errors.New("address denied")
-			}
-		}
-	}
+	//if p.chainConfig.ChainID == params.TestnetChainConfig.ChainID {
+	//
+	//	m, err := p.getBlacklist(header, parentState)
+	//	if err != nil {
+	//		log.Error("can't get blacklist", "err", err)
+	//		return err
+	//	}
+	//	m[systemcontract.ProviderFactoryContractAddr] = DirectionTo
+	//	m[systemcontract.ValidatorFactoryContractAddr] = DirectionTo
+	//	m[systemcontract.AddressListContractAddr] = DirectionTo
+	//	m[systemcontract.GetValidatorAdmin(p.chainConfig.ChainID)] = DirectionTo
+	//	m[systemcontract.GetAddressListAdmin(p.chainConfig.ChainID)] = DirectionTo
+	//	//if _, exist := m[from]; (!exist) {
+	//	//	return errors.New("address denied")
+	//	//}
+	//	if to := tx.To(); to != nil {
+	//		if d, exist := m[*to]; !exist || (d == DirectionFrom) {
+	//			return errors.New("address denied")
+	//		}
+	//	}
+	//}
 	if p.chainConfig.RedCoastBlock != nil && p.chainConfig.RedCoastBlock.Cmp(header.Number) < 0 {
 		from, err := types.Sender(p.signer, tx)
 		if err != nil {

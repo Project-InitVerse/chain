@@ -25,8 +25,8 @@ import (
 	"errors"
 	"fmt"
 
-	"PureChain/accounts"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )

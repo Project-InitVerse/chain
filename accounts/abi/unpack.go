@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 var (

@@ -17,8 +17,8 @@
 package les
 
 import (
-	"PureChain/metrics"
-	"PureChain/p2p"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p"
 )
 
 var (

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 func TestTextHash(t *testing.T) {

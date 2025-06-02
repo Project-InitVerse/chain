@@ -22,11 +22,11 @@ import (
 	"os"
 	"strings"
 
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/signer/core"
-	"PureChain/signer/rules/deps"
-	"PureChain/signer/storage"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/signer/core"
+	"github.com/Project-InitVerse/chain/signer/rules/deps"
+	"github.com/Project-InitVerse/chain/signer/storage"
 	"github.com/dop251/goja"
 )
 

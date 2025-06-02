@@ -21,9 +21,9 @@ package geth
 import (
 	"encoding/json"
 
-	"PureChain/core"
-	"PureChain/p2p/enode"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // MainnetGenesis returns the JSON spec to use for the main Ethereum network. It

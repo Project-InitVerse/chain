@@ -27,19 +27,19 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
-	"PureChain/internal/ethapi"
-	"PureChain/rlp"
-	"PureChain/signer/core"
-	"PureChain/signer/fourbyte"
-	"PureChain/signer/storage"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/signer/core"
+	"github.com/Project-InitVerse/chain/signer/fourbyte"
+	"github.com/Project-InitVerse/chain/signer/storage"
 )
 
-//Used for testing
+// Used for testing
 type headlessUi struct {
 	approveCh chan string // to send approve/deny
 	inputCh   chan string // to send password

@@ -25,10 +25,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/math"
-	"PureChain/core/types"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 type diffTest struct {

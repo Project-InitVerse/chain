@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/console/prompt"
-	"PureChain/core"
-	"PureChain/eth"
-	"PureChain/eth/ethconfig"
-	"PureChain/internal/jsre"
-	"PureChain/miner"
-	"PureChain/node"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/console/prompt"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/internal/jsre"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/node"
 )
 
 const (

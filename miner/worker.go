@@ -17,25 +17,25 @@
 package miner
 
 import (
-	"PureChain/consensus/dpos"
 	"encoding/hex"
 	"errors"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/consensus/parlia"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/params"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie"
 	mapset "github.com/deckarep/golang-set"
 )
 
@@ -97,6 +97,27 @@ type environment struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+}
+
+func (env *environment) copy() *environment {
+	cpy := &environment{
+		signer:    env.signer,
+		state:     env.state.Copy(),
+		tcount:    env.tcount,
+		ancestors: env.ancestors.Clone(),
+		family:    env.family.Clone(),
+		uncles:    env.uncles.Clone(),
+		header:    types.CopyHeader(env.header),
+		receipts:  copyReceipts(env.receipts),
+	}
+	if env.gasPool != nil {
+		gasPool := *env.gasPool
+		cpy.gasPool = &gasPool
+	}
+	cpy.txs = make([]*types.Transaction, len(env.txs))
+	copy(cpy.txs, env.txs)
+
+	return cpy
 }
 
 // task contains all information for consensus engine sealing and result submitting.
@@ -246,7 +267,10 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	if init {
 		worker.startCh <- struct{}{}
 	}
-	worker.porWork = NewPorWorker(config, chainConfig, engine, eth, &worker.challengeCh)
+	if chainConfig.Dpos != nil {
+		worker.porWork = NewPorWorker(config, chainConfig, engine, eth, &worker.challengeCh)
+	}
+
 	return worker
 }
 
@@ -545,6 +569,7 @@ func (w *worker) mainLoop() {
 				txset := types.NewTransactionsByPriceAndNonce(w.current.signer, txs)
 				tcount := w.current.tcount
 				w.commitTransactions(txset, coinbase, nil)
+
 				// Only update the snapshot if any new transactons were added
 				// to the pending block
 				if tcount != w.current.tcount {
@@ -802,6 +827,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		log.Debug("Time left for mining work", "left", (*delay - w.config.DelayLeftOver).String(), "leftover", w.config.DelayLeftOver)
 		defer stopTimer.Stop()
 	}
+	//is_first := true
 LOOP:
 	for {
 		// In the following three cases, we will interrupt the execution of the transaction.
@@ -810,6 +836,11 @@ LOOP:
 		// (3) worker recreate the mining block with any newly arrived transactions, the interrupt signal is 2.
 		// For the first two cases, the semi-finished work will be discarded.
 		// For the third case, the semi-finished work will be submitted to the consensus engine.
+		//if len(w.current.txs) > 10 {
+		//	log.Trace("Not enough tx for further transactions", "have", w.current.gasPool, "want", params.TxGas)
+		//	break
+		//}
+
 		if interrupt != nil && atomic.LoadInt32(interrupt) != commitInterruptNone {
 			// Notify resubmit loop to increase resubmitting interval due to too frequent commits.
 			if atomic.LoadInt32(interrupt) == commitInterruptResubmit {
@@ -837,6 +868,7 @@ LOOP:
 					log.Info("Not enough time for further transactions", "tx0", string(bData))
 				}
 				log.Info("Not enough time for further transactions", "txs", len(w.current.txs))
+				stopTimer.Reset(0)
 				break LOOP
 			default:
 			}
@@ -862,6 +894,12 @@ LOOP:
 		w.current.state.Prepare(tx.Hash(), common.Hash{}, w.current.tcount)
 
 		logs, err := w.commitTransaction(tx, coinbase)
+		//if is_first && len(tx.Data()) > 0 {
+		//	//is_first = is_first - 1
+		//	tmp_root := w.current.state.IntermediateRoot(true)
+		//	log.Info("first transaction exec root", "tcount", w.current.tcount, "block", w.current.header.Number.String(), "hash", tmp_root.String(), "trx_hash", tx.Hash().String())
+		//
+		//}
 		switch {
 		case errors.Is(err, core.ErrGasLimitReached):
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -958,11 +996,14 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			if w.minerIndex > len(w.posCoinbase) {
 				w.minerIndex = w.minerIndex % len(w.posCoinbase)
 			}
-			addr_res := dpos.CheckHasInTurn(w.chain, w.posCoinbase, header)
-			if addr_res != (common.Address{}) {
-				realMiner = addr_res
+			if uint64(time.Now().Unix()) < parent.Time() || (uint64(time.Now().Unix())-parent.Time()) <= 20 {
+				addr_res := dpos.CheckHasInTurn(w.chain, w.posCoinbase, header)
+				if addr_res != (common.Address{}) {
+					realMiner = addr_res
+				}
+			} else {
+				log.Info("skip in turn account")
 			}
-
 			exist := dpos.Authorize(realMiner, nil, nil)
 			if !exist {
 				log.Error("sign key not exists")
@@ -974,12 +1015,14 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			log.Error("Failed to prepare header for mining", "err", err)
 			return
 		}
+		if _, ok := w.engine.(*dpos.Dpos); ok {
+			diffInTurn := big.NewInt(2) // Block difficulty for in-turn signatures
+			//diffNoTurn := big.NewInt(1)
 
-		diffInTurn := big.NewInt(2) // Block difficulty for in-turn signatures
-		//diffNoTurn := big.NewInt(1)
-		if header.Difficulty.Cmp(diffInTurn) != 0 {
-			log.Info("not in turn", header.Difficulty, diffInTurn)
-			//return
+			if header.Difficulty.Cmp(diffInTurn) != 0 {
+				log.Info("not in turn", header.Difficulty, diffInTurn)
+				//return
+			}
 		}
 		//If we are care about TheDAO hard-fork check whether to override the extra-data or not
 		//if daoBlock := w.chainConfig.DAOForkBlock; daoBlock != nil {
@@ -996,10 +1039,14 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		//}
 		// Could potentially happen if starting to mine in an odd state.
 		err := w.makeCurrent(parent, header)
+		//tmp_root := w.current.state.IntermediateRoot(true)
+		//log.Info("first state root", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 		if err != nil {
 			log.Error("Failed to create mining context", "err", err)
 			return
 		}
+
 		// Create the current work task and check any fork transitions needed
 		env := w.current
 		//if w.chainConfig.DAOForkSupport && w.chainConfig.DAOForkBlock != nil && w.chainConfig.DAOForkBlock.Cmp(header.Number) == 0 {
@@ -1022,13 +1069,38 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
 			w.commit(uncles, nil, false, tstart)
 		}
+		//tmp_root = w.current.state.IntermediateRoot(true)
+		//log.Info("first state root1", "block", w.current.header.Number.String(), "hash", tmp_root.String())
 		// Create por challenge transaction
 		if dpos, ok := w.engine.(*dpos.Dpos); ok {
 			nonceDiff := uint64(0)
-			if w.porWork.CanLock(header.Coinbase) && len(w.challengeCh) == 0 {
-				tx, seed, provider, err := dpos.TryCreateChallenge(w.chain, header, env.state)
 
-				if err == nil {
+			// Fill the block with all available pending transactions.
+			tPending, err := w.eth.TxPool().Pending()
+			if err != nil {
+				log.Error("Failed to fetch pending transactions", "err", err)
+			}
+			if w.porWork.CanLock(header.Coinbase) && len(w.challengeCh) == 0 && len(tPending[header.Coinbase]) == 0 {
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root2", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+				tx, seed, provider, err, trxType := dpos.TryCreateChallenge(w.chain, header, env.state)
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root3", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+				if err == nil && trxType == 2 {
+					consTxs := make(map[common.Address]types.Transactions)
+					tTxs := make(types.Transactions, 0, 0)
+					tTxs = append(tTxs, tx)
+					consTxs[realMiner] = tTxs
+					//tmp_root = w.current.state.IntermediateRoot(true)
+					//log.Info("first state root4", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+					txs := types.NewTransactionsByPriceAndNonce(w.current.signer, consTxs)
+					if w.commitTransactions(txs, header.Coinbase, interrupt) {
+						return
+					}
+					//tmp_root = w.current.state.IntermediateRoot(true)
+					//log.Info("first state root5", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+					nonceDiff++
+				} else if err == nil && trxType == 1 {
 					seedSignature, err := dpos.SignSeed(header, seed)
 					if err != nil {
 						log.Error("unexcepted sign error", "err", err)
@@ -1037,12 +1109,15 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 					tTxs := make(types.Transactions, 0, 0)
 					tTxs = append(tTxs, tx)
 					consTxs[realMiner] = tTxs
-
+					//tmp_root = w.current.state.IntermediateRoot(true)
+					//log.Info("first state root6", "block", w.current.header.Number.String(), "hash", tmp_root.String())
 					txs := types.NewTransactionsByPriceAndNonce(w.current.signer, consTxs)
 
-					if w.commitTransactions(txs, w.coinbase, interrupt) {
+					if w.commitTransactions(txs, header.Coinbase, interrupt) {
 						return
 					}
+					//tmp_root = w.current.state.IntermediateRoot(true)
+					//log.Info("first state root7", "block", w.current.header.Number.String(), "hash", tmp_root.String())
 					w.porWork.AddLock(header.Coinbase)
 					w.porWork.ChallengeChan <- challengeTask{Seed: seed, Provider: provider, SeedSignature: hex.EncodeToString(seedSignature), TaskBlockNumber: header.Number.Uint64(), TransactionHash: tx.Hash(), Validator: realMiner}
 
@@ -1058,19 +1133,27 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 					break
 				}
 				oneData := <-w.challengeCh
-
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge finish 8", "block", w.current.header.Number.String(), "hash", tmp_root.String())
 				tx, err := dpos.CreateChallengeFinish(oneData.Validator, oneData.Provider, oneData.Seed, oneData.challengeAmount, oneData.rootHash, oneData.challengeState, nonceDiff, env.state, header)
 				if err == nil {
 
 					tTxs = append(tTxs, tx)
+
 					nonceDiff++
 				}
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge finish 9", "block", w.current.header.Number.String(), "hash", tmp_root.String())
 
 			}
 			if len(tTxs) > 0 {
+
 				w.eth.TxPool().AddLocals(tTxs)
 
 			}
+			//tmp_root = w.current.state.IntermediateRoot(true)
+			//log.Info("first state root challenge finish 10", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 		}
 
 		// Fill the block with all available pending transactions.
@@ -1091,17 +1174,29 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			}
 
 			if len(localTxs) > 0 {
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge 11", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 				txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
 
-				if w.commitTransactions(txs, w.coinbase, interrupt) {
+				if w.commitTransactions(txs, header.Coinbase, interrupt) {
 					return
 				}
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge 12", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 			}
 			if len(remoteTxs) > 0 {
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge finish 13", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 				txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
-				if w.commitTransactions(txs, w.coinbase, interrupt) {
+				if w.commitTransactions(txs, header.Coinbase, interrupt) {
 					return
 				}
+				//tmp_root = w.current.state.IntermediateRoot(true)
+				//log.Info("first state root challenge finish 14", "block", w.current.header.Number.String(), "hash", tmp_root.String())
+
 			}
 			commitTxsTimer.UpdateSince(start)
 			log.Info("Gas pool", "height", header.Number.String(), "pool", w.current.gasPool.String())
@@ -1114,19 +1209,23 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 // commit runs any post-transaction state modifications, assembles the final block
 // and commits new work if consensus engine is running.
 func (w *worker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
-	s := w.current.state
+
 	//fmt.Println("commit",w.current.header.Number)
 	//fmt.Println("commit",w.current.header.Extra)
-	block, receipts, err := w.engine.FinalizeAndAssemble(w.chain, types.CopyHeader(w.current.header), s, w.current.txs, uncles, w.current.receipts)
-	if err != nil {
-		return err
-	}
+
 	if w.isRunning() {
+
+		s := w.current.state
+		block, receipts, err := w.engine.FinalizeAndAssemble(w.chain, types.CopyHeader(w.current.header), s, w.current.txs, uncles, w.current.receipts)
+		if err != nil {
+			return err
+		}
 		if interval != nil {
 			interval()
 		}
+		env := w.current.copy()
 		select {
-		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
+		case w.taskCh <- &task{receipts: receipts, state: env.state, block: block, createdAt: time.Now()}:
 			w.unconfirmed.Shift(block.NumberU64() - 1)
 			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
 				"uncles", len(uncles), "txs", w.current.tcount,

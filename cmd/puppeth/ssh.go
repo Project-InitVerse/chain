@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"

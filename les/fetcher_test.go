@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // verifyImportEvent verifies that one single event arrive on an import channel.

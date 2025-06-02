@@ -22,7 +22,7 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Interface represents a wrapped version of Go's interface{}, with the capacity

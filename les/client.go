@@ -21,32 +21,32 @@ import (
 	"fmt"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/mclock"
-	"PureChain/consensus"
-	"PureChain/core"
-	"PureChain/core/bloombits"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/eth/downloader"
-	"PureChain/eth/ethconfig"
-	"PureChain/eth/filters"
-	"PureChain/eth/gasprice"
-	"PureChain/event"
-	"PureChain/internal/ethapi"
-	"PureChain/les/vflux"
-	vfc "PureChain/les/vflux/client"
-	"PureChain/light"
-	"PureChain/log"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/params"
-	"PureChain/rlp"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/bloombits"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/eth/filters"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/les/vflux"
+	vfc "github.com/Project-InitVerse/chain/les/vflux/client"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 type LightEthereum struct {
@@ -110,7 +110,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*LightEthereum, error) {
 		eventMux:       stack.EventMux(),
 		reqDist:        newRequestDistributor(peers, &mclock.System{}),
 		accountManager: stack.AccountManager(),
-		engine:         ethconfig.CreateConsensusEngine(stack, chainConfig, &config.Ethash, nil, false, chainDb, nil, genesisHash),
+		engine:         ethconfig.CreateConsensusEngine(stack, chainConfig, &config.Ethash, &config.Inihash, nil, false, chainDb, nil, genesisHash),
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   core.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
 		p2pServer:      stack.Server(),

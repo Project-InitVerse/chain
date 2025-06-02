@@ -26,9 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/log"
-	"PureChain/p2p/enr"
-	"PureChain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
 )
 
 const (

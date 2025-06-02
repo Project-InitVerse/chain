@@ -22,7 +22,7 @@ package keystore
 import (
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/rjeczalik/notify"
 )
 

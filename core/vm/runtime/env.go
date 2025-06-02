@@ -17,8 +17,8 @@
 package runtime
 
 import (
-	"PureChain/core"
-	"PureChain/core/vm"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

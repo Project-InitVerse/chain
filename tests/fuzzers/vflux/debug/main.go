@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"PureChain/log"
-	"PureChain/tests/fuzzers/vflux"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/tests/fuzzers/vflux"
 )
 
 func main() {

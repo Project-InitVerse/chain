@@ -1,20 +1,20 @@
 package systemcontract
 
 import (
-	"PureChain/common"
-	"PureChain/consensus/parlia/vmcaller"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/parlia/vmcaller"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 	"math"
 	"math/big"
 )
 
 var (
-	devAdmin        = common.HexToAddress("0xce930537a2148b8dc43899ff2e9bcbee0e801c54")
-	devAdminTestnet = common.HexToAddress("0xce930537a2148b8dc43899ff2e9bcbee0e801c54")
+	devAdmin        = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
+	devAdminTestnet = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
 )
 
 const (

@@ -24,10 +24,10 @@ import (
 	"sort"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/davecgh/go-spew/spew"
 )
 

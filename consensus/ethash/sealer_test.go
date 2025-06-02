@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/internal/testlog"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/internal/testlog"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // Tests whether remote HTTP servers are correctly notified of new work.

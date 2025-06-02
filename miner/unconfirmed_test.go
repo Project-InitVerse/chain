@@ -19,7 +19,7 @@ package miner
 import (
 	"testing"
 
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // noopChainRetriever is an implementation of headerRetriever that always

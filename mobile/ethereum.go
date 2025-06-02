@@ -21,8 +21,8 @@ package geth
 import (
 	"errors"
 
-	"PureChain"
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Subscription represents an event subscription where events are

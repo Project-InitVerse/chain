@@ -17,20 +17,18 @@
 // +build none
 
 /*
+The mkalloc tool creates the genesis allocation constants in genesis_alloc.go
+It outputs a const declaration that contains an RLP-encoded list of (address, balance) tuples.
 
-   The mkalloc tool creates the genesis allocation constants in genesis_alloc.go
-   It outputs a const declaration that contains an RLP-encoded list of (address, balance) tuples.
-
-       go run mkalloc.go genesis.json
-
+	go run mkalloc.go genesis.json
 */
 package main
 
 import (
-	"PureChain/core"
-	"PureChain/rlp"
 	"encoding/json"
 	"fmt"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/rlp"
 	"math/big"
 	"os"
 	"sort"
@@ -77,13 +75,13 @@ func main() {
 	}
 	g := new(core.Genesis)
 	file, err := os.Open(os.Args[1])
-	
+
 	if err != nil {
 		panic(err)
 	}
 	if err := json.NewDecoder(file).Decode(g); err != nil {
 		panic(err)
 	}
-	
+
 	fmt.Println("const allocData =", makealloc(g))
 }

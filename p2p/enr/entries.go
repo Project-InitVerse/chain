@@ -21,7 +21,7 @@ import (
 	"io"
 	"net"
 
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // Entry is implemented by known node record entry types.

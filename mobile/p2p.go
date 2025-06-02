@@ -21,7 +21,7 @@ package geth
 import (
 	"errors"
 
-	"PureChain/p2p"
+	"github.com/Project-InitVerse/chain/p2p"
 )
 
 // NodeInfo represents pi short summary of the information known about the host.

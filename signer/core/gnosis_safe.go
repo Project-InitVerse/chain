@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 // GnosisSafeTx is a type to parse the safe-tx returned by the relayer,

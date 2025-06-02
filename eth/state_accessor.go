@@ -22,14 +22,14 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/log"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // stateAtBlock retrieves the state database associated with a certain block.
@@ -114,11 +114,14 @@ func (eth *Ethereum) stateAtBlock(block *types.Block, reexec uint64, base *state
 		if current = eth.blockchain.GetBlockByNumber(next); current == nil {
 			return nil, fmt.Errorf("block #%d not found", next)
 		}
-		_, _, _, err := eth.blockchain.Processor().Process(current, statedb, vm.Config{})
+		_, _, _, err := eth.blockchain.Processor().Process(current, statedb, vm.Config{IsSkipProvider: true})
+
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
+
 		// Finalize the state so any modifications are written to the trie
+		statedb.Finalise(eth.blockchain.Config().IsEIP158(current.Number()))
 		root, err := statedb.Commit(eth.blockchain.Config().IsEIP158(current.Number()))
 		if err != nil {
 			return nil, err

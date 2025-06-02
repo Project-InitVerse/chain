@@ -22,11 +22,11 @@ import (
 	"sort"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/params"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 const sampleNumber = 3 // Number of transactions sampled in a block

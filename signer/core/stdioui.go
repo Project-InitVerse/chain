@@ -19,9 +19,9 @@ package core
 import (
 	"context"
 
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 type StdIOUI struct {

@@ -24,9 +24,9 @@ import (
 	"net"
 	"time"
 
-	"PureChain/common/math"
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // node represents a host on the network.

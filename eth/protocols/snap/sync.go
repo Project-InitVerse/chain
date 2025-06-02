@@ -27,19 +27,19 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/math"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/state/snapshot"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/light"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/state/snapshot"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -415,6 +415,8 @@ type Syncer struct {
 	storageSynced  uint64             // Number of storage slots downloaded
 	storageBytes   common.StorageSize // Number of storage trie bytes persisted to disk
 
+	extProgress *syncProgress
+
 	// Request tracking during healing phase
 	trienodeHealIdlers map[string]struct{} // Peers that aren't serving trie node requests
 	bytecodeHealIdlers map[string]struct{} // Peers that aren't serving bytecode requests
@@ -469,6 +471,7 @@ func NewSyncer(db ethdb.KeyValueStore) *Syncer {
 		trienodeHealReqs: make(map[uint64]*trienodeHealRequest),
 		bytecodeHealReqs: make(map[uint64]*bytecodeHealRequest),
 		stateWriter:      db.NewBatch(),
+		extProgress:      new(syncProgress),
 	}
 }
 
@@ -623,6 +626,20 @@ func (s *Syncer) Sync(root common.Hash, cancel chan struct{}) error {
 			s.assignTrienodeHealTasks(trienodeHealResps, trienodeHealReqFails, cancel)
 			s.assignBytecodeHealTasks(bytecodeHealResps, bytecodeHealReqFails, cancel)
 		}
+		s.lock.Lock()
+		s.extProgress = &syncProgress{
+			AccountSynced:      s.accountSynced,
+			AccountBytes:       s.accountBytes,
+			BytecodeSynced:     s.bytecodeSynced,
+			BytecodeBytes:      s.bytecodeBytes,
+			StorageSynced:      s.storageSynced,
+			StorageBytes:       s.storageBytes,
+			TrienodeHealSynced: s.trienodeHealSynced,
+			TrienodeHealBytes:  s.trienodeHealBytes,
+			BytecodeHealSynced: s.bytecodeHealSynced,
+			BytecodeHealBytes:  s.bytecodeHealBytes,
+		}
+		s.lock.Unlock()
 		// Wait for something to happen
 		select {
 		case <-s.update:
@@ -695,6 +712,9 @@ func (s *Syncer) loadSyncStatus() {
 					}
 				}
 			}
+			s.lock.Lock()
+			defer s.lock.Unlock()
+
 			s.snapped = len(s.tasks) == 0
 
 			s.accountSynced = progress.AccountSynced

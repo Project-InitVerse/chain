@@ -22,6 +22,7 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -30,11 +31,11 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/gopool"
-	"PureChain/common/hexutil"
-	"PureChain/consensus"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 const (
@@ -51,9 +52,11 @@ var (
 // the block's difficulty requirements.
 func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	// If we're running a fake PoW, simply return a 0 nonce immediately
+	fmt.Println("ethash seal \n\n\n")
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		header := block.Header()
 		header.Nonce, header.MixDigest = types.BlockNonce{}, common.Hash{}
+		header.ExtraNonce = types.BlockNonce{}
 		select {
 		case results <- block.WithSeal(header):
 		default:
@@ -220,9 +223,10 @@ type sealTask struct {
 
 // mineResult wraps the pow solution parameters for the specified block.
 type mineResult struct {
-	nonce     types.BlockNonce
-	mixDigest common.Hash
-	hash      common.Hash
+	nonce      types.BlockNonce
+	extraNonce types.BlockNonce
+	mixDigest  common.Hash
+	hash       common.Hash
 
 	errc chan error
 }
@@ -294,7 +298,7 @@ func (s *remoteSealer) loop() {
 
 		case result := <-s.submitWorkCh:
 			// Verify submitted PoW solution based on maintained mining blocks.
-			if s.submitWork(result.nonce, result.mixDigest, result.hash) {
+			if s.submitWork(result.nonce, result.extraNonce, result.mixDigest, result.hash) {
 				result.errc <- nil
 			} else {
 				result.errc <- errInvalidSealResult
@@ -339,10 +343,11 @@ func (s *remoteSealer) loop() {
 // makeWork creates a work package for external miner.
 //
 // The work package consists of 3 strings:
-//   result[0], 32 bytes hex encoded current block header pow-hash
-//   result[1], 32 bytes hex encoded seed hash used for DAG
-//   result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
-//   result[3], hex encoded block number
+//
+//	result[0], 32 bytes hex encoded current block header pow-hash
+//	result[1], 32 bytes hex encoded seed hash used for DAG
+//	result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
+//	result[3], hex encoded block number
 func (s *remoteSealer) makeWork(block *types.Block) {
 	hash := s.ethash.SealHash(block.Header())
 	s.currentWork[0] = hash.Hex()
@@ -400,7 +405,7 @@ func (s *remoteSealer) sendNotification(ctx context.Context, url string, json []
 // submitWork verifies the submitted pow solution, returning
 // whether the solution was accepted or not (not can be both a bad pow as well as
 // any other error, like no pending work or stale mining result).
-func (s *remoteSealer) submitWork(nonce types.BlockNonce, mixDigest common.Hash, sealhash common.Hash) bool {
+func (s *remoteSealer) submitWork(nonce types.BlockNonce, extraNonce types.BlockNonce, mixDigest common.Hash, sealhash common.Hash) bool {
 	if s.currentBlock == nil {
 		s.ethash.config.Log.Error("Pending work without block", "sealhash", sealhash)
 		return false
@@ -414,6 +419,7 @@ func (s *remoteSealer) submitWork(nonce types.BlockNonce, mixDigest common.Hash,
 	// Verify the correctness of submitted result.
 	header := block.Header()
 	header.Nonce = nonce
+	header.ExtraNonce = extraNonce
 	header.MixDigest = mixDigest
 
 	start := time.Now()

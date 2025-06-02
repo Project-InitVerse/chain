@@ -19,9 +19,9 @@ package types
 import (
 	"io"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 //go:generate gencodec -type Log -field-override logMarshaling -out gen_log_json.go

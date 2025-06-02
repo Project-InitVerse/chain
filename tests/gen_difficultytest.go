@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 var _ = (*difficultyTestMarshaling)(nil)

@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var (

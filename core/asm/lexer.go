@@ -23,7 +23,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"PureChain/common/gopool"
+	"github.com/Project-InitVerse/chain/common/gopool"
 )
 
 // stateFn is used through the lifetime of the

@@ -19,7 +19,7 @@ package ethapi
 import (
 	"sync"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 type AddrLocker struct {

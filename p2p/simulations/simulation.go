@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 // Simulation provides a framework for running actions in a simulated network

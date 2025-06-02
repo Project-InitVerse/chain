@@ -22,15 +22,18 @@ package main
 
 import (
 	"bytes"
+	"container/list"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 	"html/template"
 	"io/ioutil"
 	"math"
 	"math/big"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -41,24 +44,24 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/accounts/abi"
-	"PureChain/accounts/keystore"
-	"PureChain/cmd/utils"
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/eth/downloader"
-	"PureChain/eth/ethconfig"
-	"PureChain/ethclient"
-	"PureChain/ethstats"
-	"PureChain/les"
-	"PureChain/log"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nat"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/ethclient"
+	"github.com/Project-InitVerse/chain/ethstats"
+	"github.com/Project-InitVerse/chain/les"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/params"
 	"github.com/gorilla/websocket"
 )
 
@@ -90,10 +93,11 @@ var (
 	fixGasPrice        = flag.Int64("faucet.fixedprice", 0, "Will use fixed gas price if specified")
 	twitterTokenFlag   = flag.String("twitter.token", "", "Bearer token to authenticate with the v2 Twitter API")
 	twitterTokenV1Flag = flag.String("twitter.token.v1", "", "Bearer token to authenticate with the v1.1 Twitter API")
+	ethApiFlag         = flag.String("ethApi", "", "resend transaction through rpc")
 )
 
 var (
-	ether        = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	ether        = new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
 	bep2eAbiJson = `[ { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "owner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "spender", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" } ], "name": "Approval", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "from", "type": "address" }, { "indexed": true, "internalType": "address", "name": "to", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" } ], "name": "Transfer", "type": "event" }, { "inputs": [], "name": "totalSupply", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "decimals", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "symbol", "outputs": [ { "internalType": "string", "name": "", "type": "string" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "getOwner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "account", "type": "address" } ], "name": "balanceOf", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "transfer", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" } ], "name": "allowance", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "approve", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "sender", "type": "address" }, { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "transferFrom", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" } ]`
 )
 
@@ -113,7 +117,7 @@ func main() {
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
 		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("0.%s Ubics", strconv.FormatFloat(amount, 'f', -1, 64))
+		amounts[i] = fmt.Sprintf("0.%s Inis", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -209,7 +213,7 @@ func main() {
 		log.Crit("Failed to start faucet", "err", err)
 	}
 	defer faucet.close()
-
+	safeQueue = NewSafeQueue()
 	if err := faucet.listenAndServe(*apiPortFlag); err != nil {
 		log.Crit("Failed to launch faucet API", "err", err)
 	}
@@ -259,6 +263,54 @@ type faucet struct {
 type wsConn struct {
 	conn  *websocket.Conn
 	wlock sync.Mutex
+}
+
+type SafeQueue struct {
+	list  *list.List
+	mutex sync.Mutex
+}
+
+var safeQueue *SafeQueue
+
+func NewSafeQueue() *SafeQueue {
+	return &SafeQueue{
+		list:  list.New(),
+		mutex: sync.Mutex{},
+	}
+}
+
+func (sq *SafeQueue) Enqueue(value interface{}) {
+	sq.mutex.Lock()
+	defer sq.mutex.Unlock()
+	sq.list.PushBack(value)
+}
+
+func (sq *SafeQueue) Dequeue() interface{} {
+	sq.mutex.Lock()
+	defer sq.mutex.Unlock()
+	elem := sq.list.Front()
+
+	if elem == nil {
+		return nil
+	}
+	sq.list.Remove(elem)
+	return elem.Value
+}
+func (sq *SafeQueue) First() interface{} {
+	sq.mutex.Lock()
+	defer sq.mutex.Unlock()
+	elem := sq.list.Front()
+
+	if elem == nil {
+		return nil
+	}
+	return elem.Value
+}
+
+func (sq *SafeQueue) Size() int {
+	sq.mutex.Lock()
+	defer sq.mutex.Unlock()
+	return sq.list.Len()
 }
 
 func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte, bep2eInfos map[string]bep2eInfo) (*faucet, error) {
@@ -343,6 +395,7 @@ func (f *faucet) close() error {
 // for service user funding requests.
 func (f *faucet) listenAndServe(port int) error {
 	go f.loop()
+	go f.doReSendLoop()
 
 	http.HandleFunc("/", f.webHandler)
 	http.HandleFunc("/api", f.apiHandler)
@@ -366,13 +419,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Start tracking the connection and drop at the end
 	defer conn.Close()
-	ipsStr := r.Header.Get("X-Forwarded-For")
-	fmt.Println(ipsStr)
-	ips := strings.Split(ipsStr, ",")
-
-	if len(ips) < 2 {
-		ips = []string{"", "127.0.0.1"}
-	}
+	ip := extractRealIP(r)
 
 	f.lock.Lock()
 	wsconn := &wsConn{conn: conn}
@@ -542,7 +589,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			continue
 		}
-		log.Info("Faucet request valid", "url", msg.URL, "tier", msg.Tier, "user", username, "address", address)
+		log.Info("Faucet request valid", "url", msg.URL, "tier", msg.Tier, "user", username, "address", address, "ip", ip)
 
 		// Ensure the user didn't request funds too recently
 		f.lock.Lock()
@@ -551,7 +598,8 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			timeout time.Time
 		)
 
-		if ipTimeout := f.timeouts[ips[len(ips)-2]]; time.Now().Before(ipTimeout) {
+		if ipTimeout := f.timeouts[ip]; time.Now().Before(ipTimeout) {
+			log.Info("ip has fund", "ip", ip)
 			if err = sendError(wsconn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(time.Until(ipTimeout)))); err != nil { // nolint: gosimple
 				log.Warn("Failed to send funding error to client", "err", err)
 			}
@@ -561,7 +609,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 
 		if timeout = f.timeouts[id]; time.Now().After(timeout) {
 			var tx *types.Transaction
-			if msg.Symbol == "UBIC" {
+			if msg.Symbol == "INI" {
 				// User wasn't funded recently, create the funding transaction
 				amount := new(big.Int).Div(new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether), big.NewInt(10))
 				amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
@@ -593,6 +641,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			// Submit the transaction and mark as funded if successful
+
 			if err := f.client.SendTransaction(context.Background(), signed); err != nil {
 				f.lock.Unlock()
 				if err = sendError(wsconn, err); err != nil {
@@ -601,6 +650,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				continue
 			}
+			safeQueue.Enqueue(*signed)
 			f.reqs = append(f.reqs, &request{
 				Avatar:  avatar,
 				Account: address,
@@ -611,13 +661,14 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			grace := timeout / 288 // 24h timeout => 5m grace
 
 			f.timeouts[id] = time.Now().Add(timeout - grace)
-			f.timeouts[ips[len(ips)-2]] = time.Now().Add(timeout - grace)
+			f.timeouts[ip] = time.Now().Add(timeout - grace)
 			fund = true
 		}
 		f.lock.Unlock()
 
 		// Send an error if too frequent funding, othewise a success
 		if !fund {
+			log.Info("id has fund", "id", id)
 			if err = sendError(wsconn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(time.Until(timeout)))); err != nil { // nolint: gosimple
 				log.Warn("Failed to send funding error to client", "err", err)
 				return
@@ -633,6 +684,40 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 		}
 	}
+}
+
+func extractRealIP(r *http.Request) string {
+	headersToCheck := []string{"X-Forwarded-For", "X-Forwarded", "X-Real-IP", "X-Cluster-Client-IP", "X-Proxy-Remote-IP", "X-Proxy-Client-IP", "Client-IP", "WL-Proxy-Client-IP"}
+	log.Info("get request header", "X-Forwarded-For", r.Header.Get("X-Forwarded-For"))
+	for _, header := range headersToCheck {
+		if ip := r.Header.Get(header); ip != "" {
+			ips := strings.Split(ip, ",")
+			for _, ip := range ips {
+				ip = strings.TrimSpace(ip)
+				if net.ParseIP(ip) != nil {
+					if !isPrivateIP(net.ParseIP(ip)) && ip != "127.0.0.1" {
+						return ip
+					}
+				}
+			}
+		}
+	}
+
+	log.Info("unable get real ip", "remoteAddr", r.RemoteAddr)
+	return strings.Split(r.RemoteAddr, ":")[0]
+}
+
+func isPrivateIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return false
+	}
+	return ip[0] == 10 ||
+		(ip[0] == 192 && ip[1] == 168) ||
+		(ip[0] == 172 && (ip[1]&0xf0) == 16)
 }
 
 // refresh attempts to retrieve the latest header from the chain and extract the
@@ -834,7 +919,7 @@ func authTwitter(url string, tokenV1, tokenV2 string) (string, string, string, c
 	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", "", common.Address{}, errors.New("No UBIC Smart Chain address found to fund")
+		return "", "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
 	}
 	var avatar string
 	if parts = regexp.MustCompile(`src="([^"]+twimg\.com/profile_images[^"]+)"`).FindStringSubmatch(string(body)); len(parts) == 2 {
@@ -960,7 +1045,7 @@ func authFacebook(url string) (string, string, common.Address, error) {
 	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", common.Address{}, errors.New("No UBIC Smart Chain address found to fund")
+		return "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
 	}
 	var avatar string
 	if parts = regexp.MustCompile(`src="([^"]+fbcdn\.net[^"]+)"`).FindStringSubmatch(string(body)); len(parts) == 2 {
@@ -973,10 +1058,120 @@ func authFacebook(url string) (string, string, common.Address, error) {
 // without actually performing any remote authentication. This mode is prone to
 // Byzantine attack, so only ever use for truly private networks.
 func authNoAuth(url string) (string, string, common.Address, error) {
-	address := common.HexToAddress(regexp.MustCompile("0x[0-9a-fA-F]{40}").FindString(url))
+	var address common.Address
+	if strings.HasPrefix(url, "I4") {
+		address = common.HexToAddress(url)
+	}
+	address = common.HexToAddress(regexp.MustCompile("0x[0-9a-fA-F]{40}").FindString(url))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", common.Address{}, errors.New("No UBIC Smart Chain address found to fund")
+		return "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
 	}
 	return address.Hex() + "@noauth", "", address, nil
+}
+
+func (f *faucet) rpcSendRawTransaction(tx *types.Transaction) string {
+
+	url := *ethApiFlag
+	method := "POST"
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		log.Info(err.Error())
+		return ""
+	}
+
+	jsonStr := fmt.Sprintf(`{"id":"2","jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["%s"]}`, hexutil.Encode(data))
+	payload := strings.NewReader(jsonStr)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+
+	if err != nil {
+		log.Info(err.Error())
+		return ""
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Info(err.Error())
+		return ""
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Info(err.Error())
+		return ""
+	} else {
+		log.Info(string(body))
+	}
+	return string(body)
+
+}
+
+func (f *faucet) doReSendLoop() {
+	for {
+		if ethApiFlag != nil && len(*ethApiFlag) > 0 {
+			log.Info("safeQueue size", "size", safeQueue.Size())
+			if safeQueue.Size() > 0 {
+				count := safeQueue.Size()
+
+				localContext := context.Background()
+				currentHead, err := f.client.BlockNumber(localContext)
+				if err != nil {
+					time.Sleep(100 * time.Second)
+					continue
+				}
+				for i := 0; i < count; i++ {
+					signedTx := safeQueue.Dequeue().(types.Transaction)
+					txid := signedTx.Hash()
+					ret, err := f.client.TransactionDataAndReceipt(localContext, txid)
+					log.Debug("TransactionDataAndReceipt", "tx", ret, "err", err)
+					if err != nil {
+
+						if err == core.ErrNonceTooLow {
+							log.Error("find nonce too low transaction ", "txid", txid, "txTo", signedTx.To().String(), "nonce", signedTx.Nonce())
+
+						} else {
+							log.Debug("resend transaction ", "txid", txid)
+							ret := f.rpcSendRawTransaction(&signedTx)
+							if strings.Contains(ret, "nonce too low") {
+								log.Info("transaction is replace by other transaction", "txid", txid)
+							} else {
+								safeQueue.Enqueue(signedTx)
+							}
+
+						}
+
+					} else {
+						if ret.Receipt.BlockNumber == nil {
+							log.Debug("resend transaction because not in chain block", "txid", txid)
+							ret := f.rpcSendRawTransaction(&signedTx)
+							if strings.Contains(ret, "nonce too low") {
+								log.Info("transaction is replace by other transaction", "txid", txid)
+							} else {
+								safeQueue.Enqueue(signedTx)
+							}
+						} else if ret.Receipt.BlockNumber.Uint64()+10 > currentHead {
+							log.Debug("resend transaction because not meet safe block height", "txid", txid)
+							//f.client.SendTransaction(localContext, &signedTx)
+							safeQueue.Enqueue(signedTx)
+						}
+					}
+
+				}
+				time.Sleep(time.Second * 100)
+			} else {
+				time.Sleep(time.Second * 100)
+			}
+		} else {
+			count := safeQueue.Size()
+			for i := 0; i < count; i++ {
+				safeQueue.Dequeue()
+			}
+			time.Sleep(100 * time.Second)
+		}
+	}
+
 }

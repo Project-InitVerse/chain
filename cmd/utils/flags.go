@@ -33,39 +33,39 @@ import (
 	"text/template"
 	"time"
 
-	"PureChain/accounts"
-	"PureChain/accounts/keystore"
-	"PureChain/common"
-	"PureChain/common/fdlimit"
-	"PureChain/consensus"
-	"PureChain/consensus/clique"
-	"PureChain/consensus/ethash"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/vm"
-	"PureChain/crypto"
-	"PureChain/eth"
-	"PureChain/eth/downloader"
-	"PureChain/eth/ethconfig"
-	"PureChain/eth/gasprice"
-	"PureChain/eth/tracers"
-	"PureChain/ethdb"
-	"PureChain/ethstats"
-	"PureChain/graphql"
-	"PureChain/internal/ethapi"
-	"PureChain/internal/flags"
-	"PureChain/les"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/metrics/exp"
-	"PureChain/metrics/influxdb"
-	"PureChain/miner"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/nat"
-	"PureChain/p2p/netutil"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/fdlimit"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/eth"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/eth/tracers"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethstats"
+	"github.com/Project-InitVerse/chain/graphql"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/internal/flags"
+	"github.com/Project-InitVerse/chain/les"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/metrics/exp"
+	"github.com/Project-InitVerse/chain/metrics/influxdb"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/nat"
+	"github.com/Project-InitVerse/chain/p2p/netutil"
+	"github.com/Project-InitVerse/chain/params"
 	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	"gopkg.in/urfave/cli.v1"
@@ -152,12 +152,19 @@ var (
 		Value: ethconfig.Defaults.NetworkId,
 	}
 	MainnetFlag = cli.BoolFlag{
-		Name:  "mainnet",
-		Usage: "Ethereum mainnet",
+		Name:   "mainnet",
+		Usage:  "Ethereum mainnet",
+		EnvVar: "MAINNET",
 	}
 	TestnetFlag = cli.BoolFlag{
-		Name:  "testnet",
-		Usage: "Ethereum testnet",
+		Name:   "testnet",
+		Usage:  "Ethereum testnet",
+		EnvVar: "TESTNET",
+	}
+	DevnetFlag = cli.BoolFlag{
+		Name:   "devnet",
+		Usage:  "Ethereum devnet",
+		EnvVar: "DEVNET",
 	}
 
 	DeveloperFlag = cli.BoolFlag{
@@ -878,6 +885,9 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	//	urls = params.YoloV3Bootnodes
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
+	case ctx.GlobalBool(DevnetFlag.Name):
+		urls = params.DevnetBootnodes
+
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -1522,7 +1532,7 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	// Avoid conflicting network flags
-	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, TestnetFlag)
+	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, TestnetFlag, DevnetFlag)
 	CheckExclusive(ctx, LightServeFlag, SyncModeFlag, "light")
 	CheckExclusive(ctx, DeveloperFlag, ExternalSignerFlag) // Can't use both ephemeral unlocked and external signer
 	if ctx.GlobalString(GCModeFlag.Name) == "archive" && ctx.GlobalUint64(TxLookupLimitFlag.Name) != 0 {
@@ -1547,7 +1557,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if ctx.GlobalBool(AddressTypeFlag.Name) {
 		common.AddressType = 1
 	} else {
-		common.AddressType = 2
+		common.AddressType = 1
 	}
 
 	// Cap the cache allowance and tune the garbage collector
@@ -1678,7 +1688,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	switch {
 	case ctx.GlobalBool(MainnetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 1
+			cfg.NetworkId = 7233
 		}
 		cfg.Genesis = core.DefaultGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
@@ -1688,6 +1698,13 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.TestnetGenesisHash)
+	case ctx.GlobalBool(DevnetFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 1
+		}
+		cfg.Genesis = core.DefaultDevnetGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.DevnetGenesisHash)
+
 	//case ctx.GlobalBool(RopstenFlag.Name):
 	//	if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 	//		cfg.NetworkId = 3
@@ -1897,6 +1914,9 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultGenesisBlock()
 	case ctx.GlobalBool(TestnetFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
+	case ctx.GlobalBool(DevnetFlag.Name):
+		genesis = core.DefaultDevnetGenesisBlock()
+
 	//case ctx.GlobalBool(RopstenFlag.Name):
 	//	genesis = core.DefaultRopstenGenesisBlock()
 	//case ctx.GlobalBool(RinkebyFlag.Name):

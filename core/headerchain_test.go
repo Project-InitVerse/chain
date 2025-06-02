@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/consensus"
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func verifyUnbrokenCanonchain(hc *HeaderChain) error {

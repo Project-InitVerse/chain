@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts/abi/bind"
-	"PureChain/core"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/light"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/light"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Test light syncing which will download all headers from genesis.

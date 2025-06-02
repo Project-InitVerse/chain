@@ -26,10 +26,10 @@ import (
 	"reflect"
 	"strings"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 var (

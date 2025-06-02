@@ -22,7 +22,7 @@ var Modules = map[string]string{
 	"admin":      AdminJs,
 	"chequebook": ChequebookJs,
 	"clique":     CliqueJs,
-	"ethash":     EthashJs,
+	"inihash":    InihashJs,
 	"debug":      DebugJs,
 	"eth":        EthJs,
 	"miner":      MinerJs,
@@ -118,28 +118,28 @@ web3._extend({
 });
 `
 
-const EthashJs = `
+const InihashJs = `
 web3._extend({
-	property: 'ethash',
+	property: 'inihash',
 	methods: [
 		new web3._extend.Method({
 			name: 'getWork',
-			call: 'ethash_getWork',
+			call: 'inihash_getWork',
 			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'getHashrate',
-			call: 'ethash_getHashrate',
+			call: 'inihash_getHashrate',
 			params: 0
 		}),
 		new web3._extend.Method({
 			name: 'submitWork',
-			call: 'ethash_submitWork',
+			call: 'inihash_submitWork',
 			params: 3,
 		}),
 		new web3._extend.Method({
 			name: 'submitHashrate',
-			call: 'ethash_submitHashrate',
+			call: 'inihash_submitHashrate',
 			params: 2,
 		}),
 	]
@@ -586,6 +586,12 @@ web3._extend({
 			call: 'eth_createAccessList',
 			params: 2,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
+		}),
+		new web3._extend.Method({
+			name: 'call',
+			call: 'eth_call',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter, null],
 		}),
 	],
 	properties: [

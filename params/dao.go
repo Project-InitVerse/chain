@@ -19,7 +19,7 @@ package params
 import (
 	"math/big"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // DAOForkBlockExtra is the block header extra-data field to set for the DAO fork

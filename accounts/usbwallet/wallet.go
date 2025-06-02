@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"PureChain"
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/karalabe/usb"
 )
 

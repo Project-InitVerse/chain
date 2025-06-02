@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"time"
 
-	"PureChain/log"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint.

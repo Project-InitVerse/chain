@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common/bitutil"
-	"PureChain/common/gopool"
-	"PureChain/metrics"
-	"PureChain/p2p/rlpx"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p/rlpx"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 const (

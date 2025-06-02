@@ -23,10 +23,10 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/crypto"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 func TestDecodeEmptyTypedReceipt(t *testing.T) {

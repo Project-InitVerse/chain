@@ -19,9 +19,9 @@ package rawdb
 import (
 	"encoding/binary"
 
-	"PureChain/common"
-	"PureChain/ethdb"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ReadSnapshotDisabled retrieves if the snapshot maintenance is disabled.

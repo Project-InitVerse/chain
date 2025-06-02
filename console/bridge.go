@@ -24,12 +24,12 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/accounts/scwallet"
-	"PureChain/accounts/usbwallet"
-	"PureChain/common/hexutil"
-	"PureChain/console/prompt"
-	"PureChain/internal/jsre"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts/scwallet"
+	"github.com/Project-InitVerse/chain/accounts/usbwallet"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/console/prompt"
+	"github.com/Project-InitVerse/chain/internal/jsre"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/dop251/goja"
 )
 

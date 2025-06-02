@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"PureChain"
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/state/snapshot"
-	"PureChain/core/types"
-	"PureChain/eth/protocols/eth"
-	"PureChain/ethdb"
-	"PureChain/event"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state/snapshot"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/eth/protocols/eth"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // Reduce some of the parameters to make the tester faster.

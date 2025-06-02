@@ -31,7 +31,7 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Command line flags to configure the interpreters.

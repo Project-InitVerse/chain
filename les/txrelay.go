@@ -20,9 +20,9 @@ import (
 	"context"
 	"sync"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type lesTxRelay struct {

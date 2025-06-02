@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

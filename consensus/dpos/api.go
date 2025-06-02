@@ -19,10 +19,10 @@ package dpos
 import (
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core/types"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/rpc"
 )
 
 // API is a user facing RPC API to allow controlling the validator and voting

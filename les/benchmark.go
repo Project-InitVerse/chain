@@ -24,17 +24,17 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/mclock"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/les/flowcontrol"
-	"PureChain/log"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/params"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/les/flowcontrol"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 // requestBenchmark is an interface for different randomized request generators

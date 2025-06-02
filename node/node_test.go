@@ -28,10 +28,10 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/p2p"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/rpc"
 
 	"github.com/stretchr/testify/assert"
 )

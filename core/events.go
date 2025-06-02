@@ -17,8 +17,8 @@
 package core
 
 import (
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

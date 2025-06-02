@@ -18,7 +18,8 @@
 package ethconfig
 
 import (
-	"PureChain/consensus/dpos"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
+	"github.com/Project-InitVerse/chain/consensus/inihash"
 	"math/big"
 	"os"
 	"os/user"
@@ -26,20 +27,20 @@ import (
 	"runtime"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/consensus/clique"
-	"PureChain/consensus/ethash"
-	"PureChain/consensus/parlia"
-	"PureChain/core"
-	"PureChain/eth/downloader"
-	"PureChain/eth/gasprice"
-	"PureChain/ethdb"
-	"PureChain/internal/ethapi"
-	"PureChain/log"
-	"PureChain/miner"
-	"PureChain/node"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/gasprice"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/miner"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // FullNodeGPO contains default gasprice oracle settings for full node.
@@ -59,7 +60,7 @@ var LightClientGPO = gasprice.Config{
 
 // Defaults contains default settings for use on the Ethereum main net.
 var Defaults = Config{
-	SyncMode: downloader.FastSync,
+	SyncMode: downloader.FullSync,
 	Ethash: ethash.Config{
 		CacheDir:         "ethash",
 		CachesInMem:      2,
@@ -83,7 +84,7 @@ var Defaults = Config{
 	SnapshotCache:           102,
 	Miner: miner.Config{
 		GasFloor:      15000000,
-		GasCeil:       15000000,
+		GasCeil:       30000000,
 		GasPrice:      big.NewInt(params.GWei),
 		Recommit:      3 * time.Second,
 		DelayLeftOver: 500 * time.Millisecond,
@@ -177,7 +178,8 @@ type Config struct {
 	PorChallengeCommitUrl string
 	Por                   bool
 	// Ethash options
-	Ethash ethash.Config `toml:",omitempty"`
+	Ethash  ethash.Config  `toml:",omitempty"`
+	Inihash inihash.Config `toml:",omitempty"`
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig
@@ -215,7 +217,7 @@ type Config struct {
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database, ee *ethapi.PublicBlockChainAPI, genesisHash common.Hash) consensus.Engine {
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, iniConfig *inihash.Config, notify []string, noverify bool, db ethdb.Database, ee *ethapi.PublicBlockChainAPI, genesisHash common.Hash) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -234,6 +236,22 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		log.Warn("Ethash used in test mode")
 	case ethash.ModeShared:
 		log.Warn("Ethash used in shared mode")
+	}
+	if chainConfig.Inihash != nil {
+		engine := inihash.New(inihash.Config{
+			PowMode:          iniConfig.PowMode,
+			CacheDir:         stack.ResolvePath(iniConfig.CacheDir),
+			CachesInMem:      iniConfig.CachesInMem,
+			CachesOnDisk:     iniConfig.CachesOnDisk,
+			CachesLockMmap:   iniConfig.CachesLockMmap,
+			DatasetDir:       iniConfig.DatasetDir,
+			DatasetsInMem:    iniConfig.DatasetsInMem,
+			DatasetsOnDisk:   iniConfig.DatasetsOnDisk,
+			DatasetsLockMmap: iniConfig.DatasetsLockMmap,
+			NotifyFull:       iniConfig.NotifyFull,
+		}, notify, noverify, chainConfig.ChainID)
+		engine.SetThreads(-1) // Disable CPU mining
+		return engine
 	}
 	engine := ethash.New(ethash.Config{
 		PowMode:          config.PowMode,

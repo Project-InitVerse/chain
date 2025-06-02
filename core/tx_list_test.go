@@ -21,8 +21,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"PureChain/core/types"
-	"PureChain/crypto"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
 )
 
 // Tests that transactions can be added to strict lists and list contents and

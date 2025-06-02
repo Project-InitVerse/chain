@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"PureChain/common"
-	"PureChain/core/types"
-	"PureChain/log"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 // handleGetBlockHeaders handles Block header query, collect the requested headers and reply

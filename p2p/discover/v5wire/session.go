@@ -22,9 +22,9 @@ import (
 	"encoding/binary"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/crypto"
-	"PureChain/p2p/enode"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 

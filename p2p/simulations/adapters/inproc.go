@@ -24,13 +24,13 @@ import (
 	"net"
 	"sync"
 
-	"PureChain/event"
-	"PureChain/log"
-	"PureChain/node"
-	"PureChain/p2p"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/simulations/pipes"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/event"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/p2p"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/simulations/pipes"
+	"github.com/Project-InitVerse/chain/rpc"
 	"github.com/gorilla/websocket"
 )
 

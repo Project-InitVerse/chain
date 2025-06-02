@@ -21,11 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"PureChain/common"
-	"PureChain/core"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // NoOdr is the default context passed to an ODR capable function when the ODR

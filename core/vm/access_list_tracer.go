@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // accessList is an accumulator for the set of accounts and storage slots an EVM

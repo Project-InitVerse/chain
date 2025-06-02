@@ -24,7 +24,7 @@ import (
 	"os"
 	"runtime/trace"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // StartGoTrace turns on tracing, writing to the given file.

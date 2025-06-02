@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 var (

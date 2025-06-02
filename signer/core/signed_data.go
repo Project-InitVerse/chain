@@ -17,11 +17,11 @@
 package core
 
 import (
-	"PureChain/consensus/dpos"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain/consensus/dpos"
 	"math/big"
 	"mime"
 	"reflect"
@@ -31,15 +31,15 @@ import (
 	"strings"
 	"unicode"
 
-	"PureChain/accounts"
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/common/math"
-	"PureChain/consensus/clique"
-	"PureChain/consensus/parlia"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common/math"
+	"github.com/Project-InitVerse/chain/consensus/clique"
+	"github.com/Project-InitVerse/chain/consensus/parlia"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type SigFormat struct {

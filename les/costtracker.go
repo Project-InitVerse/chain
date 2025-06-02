@@ -23,12 +23,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"PureChain/common/mclock"
-	"PureChain/eth/ethconfig"
-	"PureChain/ethdb"
-	"PureChain/les/flowcontrol"
-	"PureChain/log"
-	"PureChain/metrics"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/les/flowcontrol"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 )
 
 const makeCostStats = false // make request cost statistics during operation

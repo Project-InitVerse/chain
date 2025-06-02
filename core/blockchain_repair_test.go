@@ -27,12 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/common"
-	"PureChain/consensus/ethash"
-	"PureChain/core/rawdb"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus/ethash"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 // Tests a recovery for a short canonical chain where a recent block was already

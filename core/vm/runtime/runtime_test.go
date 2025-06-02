@@ -24,16 +24,16 @@ import (
 	"testing"
 	"time"
 
-	"PureChain/accounts/abi"
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core"
-	"PureChain/core/asm"
-	"PureChain/core/rawdb"
-	"PureChain/core/state"
-	"PureChain/core/types"
-	"PureChain/core/vm"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/asm"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 func TestDefaults(t *testing.T) {

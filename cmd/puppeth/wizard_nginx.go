@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // ensureVirtualHost checks whether a reverse-proxy is running on the specified

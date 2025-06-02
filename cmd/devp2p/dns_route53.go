@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"PureChain/log"
-	"PureChain/p2p/dnsdisc"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/p2p/dnsdisc"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"

@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"PureChain/internal/debug"
-	"PureChain/p2p/enode"
-	"PureChain/params"
+	"github.com/Project-InitVerse/chain/internal/debug"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

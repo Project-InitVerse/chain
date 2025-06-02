@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 var _ = (*logMarshaling)(nil)

@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/log"
 )
 
 // makeWizard creates and returns a new puppeth wizard.

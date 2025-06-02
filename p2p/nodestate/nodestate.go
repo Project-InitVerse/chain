@@ -23,13 +23,13 @@ import (
 	"time"
 	"unsafe"
 
-	"PureChain/common/mclock"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/p2p/enode"
-	"PureChain/p2p/enr"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/common/mclock"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/p2p/enode"
+	"github.com/Project-InitVerse/chain/p2p/enr"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 var (
@@ -808,7 +808,15 @@ func (ns *NodeStateMachine) addTimeout(n *enode.Node, mask bitMask, timeout time
 	ns.removeTimeouts(node, mask)
 	t := &nodeStateTimeout{mask: mask}
 	t.timer = ns.clock.AfterFunc(timeout, func() {
-		ns.SetState(n, Flags{}, Flags{mask: t.mask, setup: ns.setup}, 0)
+		//ns.SetState(n, Flags{}, Flags{mask: t.mask, setup: ns.setup}, 0)
+		ns.lock.Lock()
+		defer ns.lock.Unlock()
+
+		if !ns.opStart() {
+			return
+		}
+		ns.setState(n, Flags{}, Flags{mask: t.mask, setup: ns.setup}, 0)
+		ns.opFinish()
 	})
 	node.timeouts = append(node.timeouts, t)
 	if mask&ns.saveFlags != 0 {

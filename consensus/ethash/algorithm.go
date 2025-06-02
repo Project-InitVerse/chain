@@ -27,11 +27,11 @@ import (
 	"time"
 	"unsafe"
 
-	"PureChain/common"
-	"PureChain/common/bitutil"
-	"PureChain/common/gopool"
-	"PureChain/crypto"
-	"PureChain/log"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/bitutil"
+	"github.com/Project-InitVerse/chain/common/gopool"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/log"
 	"golang.org/x/crypto/sha3"
 )
 

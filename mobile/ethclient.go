@@ -21,8 +21,8 @@ package geth
 import (
 	"math/big"
 
-	"PureChain/core/types"
-	"PureChain/ethclient"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/ethclient"
 )
 
 // EthereumClient provides access to the Ethereum APIs.

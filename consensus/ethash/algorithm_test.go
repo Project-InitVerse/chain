@@ -26,9 +26,9 @@ import (
 	"sync"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
-	"PureChain/core/types"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
+	"github.com/Project-InitVerse/chain/core/types"
 )
 
 // prepare converts an ethash cache or dataset from a byte stream into the internal

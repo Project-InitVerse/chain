@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"PureChain/node"
+	"github.com/Project-InitVerse/chain/node"
 	"gopkg.in/urfave/cli.v1"
 )
 

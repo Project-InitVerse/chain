@@ -22,8 +22,8 @@ import (
 	"math/big"
 	"time"
 
-	"PureChain/common"
-	"PureChain/common/math"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/math"
 )
 
 type JSONLogger struct {

@@ -26,16 +26,16 @@ import (
 	"sync"
 	"time"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/core/state/snapshot"
-	"PureChain/core/types"
-	"PureChain/crypto"
-	"PureChain/ethdb"
-	"PureChain/log"
-	"PureChain/metrics"
-	"PureChain/rlp"
-	"PureChain/trie"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/core/state/snapshot"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
+	"github.com/Project-InitVerse/chain/rlp"
+	"github.com/Project-InitVerse/chain/trie"
 )
 
 const (
@@ -72,11 +72,12 @@ func (n *proofList) Delete(key []byte) error {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db           Database
-	prefetcher   *triePrefetcher
-	originalRoot common.Hash // The pre-state root, before any changes were made
-	trie         Trie
-	hasher       crypto.KeccakState
+	db             Database
+	prefetcherLock sync.Mutex
+	prefetcher     *triePrefetcher
+	originalRoot   common.Hash // The pre-state root, before any changes were made
+	trie           Trie
+	hasher         crypto.KeccakState
 
 	snapMux       sync.Mutex
 	snaps         *snapshot.Tree
@@ -168,6 +169,8 @@ func newStateDB(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, 
 // state trie concurrently while the state is mutated so that when we reach the
 // commit phase, most of the needed data is already hot.
 func (s *StateDB) StartPrefetcher(namespace string) {
+	s.prefetcherLock.Lock()
+	defer s.prefetcherLock.Unlock()
 	if s.prefetcher != nil {
 		s.prefetcher.close()
 		s.prefetcher = nil
@@ -180,10 +183,12 @@ func (s *StateDB) StartPrefetcher(namespace string) {
 // StopPrefetcher terminates a running prefetcher and reports any leftover stats
 // from the gathered metrics.
 func (s *StateDB) StopPrefetcher() {
+	s.prefetcherLock.Lock()
 	if s.prefetcher != nil {
 		s.prefetcher.close()
 		s.prefetcher = nil
 	}
+	s.prefetcherLock.Unlock()
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -503,9 +508,7 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 	return true
 }
 
-//
 // Setting, updating & deleting state object methods.
-//
 func (s *StateDB) Erase(addr common.Address) bool {
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
@@ -614,10 +617,11 @@ func (s *StateDB) preloadStateObject(address []common.Address) []*StateObject {
 				continue
 			}
 			data := &Account{
-				Nonce:    acc.Nonce,
-				Balance:  acc.Balance,
-				CodeHash: acc.CodeHash,
-				Root:     common.BytesToHash(acc.Root),
+				Nonce:       acc.Nonce,
+				Balance:     acc.Balance,
+				LockBalance: acc.LockBalance,
+				CodeHash:    acc.CodeHash,
+				Root:        common.BytesToHash(acc.Root),
 			}
 			if len(data.CodeHash) == 0 {
 				data.CodeHash = emptyCodeHash
@@ -750,8 +754,8 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) 
 // CreateAccount is called during the EVM CREATE operation. The situation might arise that
 // a contract does the following:
 //
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
+//  1. sends funds to sha(account ++ (nonce + 1))
+//  2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (s *StateDB) CreateAccount(addr common.Address) {
@@ -861,8 +865,9 @@ func (s *StateDB) Copy() *StateDB {
 	// If there's a prefetcher running, make an inactive copy of it that can
 	// only access data but does not actively preload (since the user will not
 	// know that they need to explicitly terminate an active copy).
-	if s.prefetcher != nil {
-		state.prefetcher = s.prefetcher.copy()
+	prefetcher := s.prefetcher
+	if prefetcher != nil {
+		state.prefetcher = prefetcher.copy()
 	}
 	if s.snaps != nil {
 		// In order for the miner to be able to use and make additions
@@ -963,8 +968,13 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			addressesToPrefetch = append(addressesToPrefetch, common.CopyBytes(addr[:])) // Copy needed for closure
 		}
 	}
-	if s.prefetcher != nil && len(addressesToPrefetch) > 0 {
-		s.prefetcher.prefetch(s.originalRoot, addressesToPrefetch, emptyAddr)
+	//if s.prefetcher != nil && len(addressesToPrefetch) > 0 {
+	//	s.prefetcher.prefetch(s.originalRoot, addressesToPrefetch, emptyAddr)
+	//}
+	prefetcher := s.prefetcher
+	if prefetcher != nil && len(addressesToPrefetch) > 0 {
+
+		prefetcher.prefetch(s.originalRoot, addressesToPrefetch, emptyAddr)
 	}
 	// Invalidate journal because reverting across transactions is not allowed.
 	s.clearJournalAndRefund()
@@ -985,12 +995,15 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// the remainder without, but pre-byzantium even the initial prefetcher is
 	// useless, so no sleep lost.
 	prefetcher := s.prefetcher
-	if s.prefetcher != nil {
-		defer func() {
+	defer func() {
+		s.prefetcherLock.Lock()
+		if s.prefetcher != nil {
 			s.prefetcher.close()
 			s.prefetcher = nil
-		}()
-	}
+		}
+		// try not use defer inside defer
+		s.prefetcherLock.Unlock()
+	}()
 
 	tasks := make(chan func())
 	finishCh := make(chan struct{})

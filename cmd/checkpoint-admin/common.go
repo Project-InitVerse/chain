@@ -19,15 +19,15 @@ package main
 import (
 	"strconv"
 
-	"PureChain/accounts"
-	"PureChain/accounts/abi/bind"
-	"PureChain/accounts/external"
-	"PureChain/cmd/utils"
-	"PureChain/common"
-	"PureChain/contracts/checkpointoracle"
-	"PureChain/ethclient"
-	"PureChain/params"
-	"PureChain/rpc"
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/abi/bind"
+	"github.com/Project-InitVerse/chain/accounts/external"
+	"github.com/Project-InitVerse/chain/cmd/utils"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/contracts/checkpointoracle"
+	"github.com/Project-InitVerse/chain/ethclient"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

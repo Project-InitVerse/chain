@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	"PureChain/common"
-	"PureChain/common/hexutil"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 	"github.com/davecgh/go-spew/spew"
 )
 

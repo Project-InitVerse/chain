@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"PureChain/common"
+	"github.com/Project-InitVerse/chain/common"
 )
 
 // Type enumerator

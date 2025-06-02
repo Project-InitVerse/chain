@@ -27,9 +27,9 @@ import (
 	"strings"
 	"testing"
 
-	"PureChain/crypto"
-	"PureChain/crypto/ecies"
-	"PureChain/rlp"
+	"github.com/Project-InitVerse/chain/crypto"
+	"github.com/Project-InitVerse/chain/crypto/ecies"
+	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 )

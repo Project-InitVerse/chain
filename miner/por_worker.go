@@ -1,15 +1,15 @@
 package miner
 
 import (
-	"PureChain/common"
-	"PureChain/consensus"
-	"PureChain/core"
-	"PureChain/log"
-	"PureChain/params"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/params"
 	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"math/big"
@@ -57,6 +57,12 @@ type challengeResult struct {
 	ChallengeCount int64             `json:"challenge_count"`
 }
 
+type readyResult struct {
+	TaskId         int64 `json:"task_id"`
+	ChallengeCount int64 `json:"challenge_count"`
+	Ready          bool  `json:"ready"`
+}
+
 // ChallengeFinishData is for challenge commit
 type ChallengeFinishData struct {
 	Seed            uint64
@@ -102,24 +108,25 @@ func submitSeed(commitUrl string, seed uint64, blockNumber uint64, Validator str
 	method := "POST"
 
 	payload := strings.NewReader(fmt.Sprintf(`{"seed":%v,"block_number":%v,"validator":"%v","provider":"%v","create_tx":"%v","Signature":"%v"}`, seed, blockNumber, Validator, Provider, CreateTx, Signature))
+	log.Info("submitSeed", "seed", seed)
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Error("submitSeed error", err.Error())
 		return ""
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Error("submitSeed error", err.Error())
 		return ""
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
+		log.Error("submitSeed error", err.Error())
 		return ""
 	}
 	//fmt.Println(string(body))
@@ -167,10 +174,12 @@ func verifyTree(treePath string) (bool, string) {
 		sha.Write(tmpByte)
 		hexString = hex.EncodeToString(sha.Sum(nil))
 	}
+
 	return false, ""
 }
 
 func verifyLeaf(seed, index uint64, treePath string) bool {
+	start := time.Now().UnixMilli()
 	var retData [][]string
 	err := json.Unmarshal([]byte(treePath), &retData)
 	if err != nil {
@@ -194,6 +203,7 @@ func verifyLeaf(seed, index uint64, treePath string) bool {
 			return true
 		}
 	}
+	log.Info("verifyLeaf", "seed", seed, "cost mills", time.Now().UnixMilli()-start)
 	return false
 }
 func ParentHash(leftNode []byte, rightNode []byte) []byte {
@@ -277,20 +287,24 @@ func BuildTreeFromRetrievalAddresses(seeds []string) (*TreeNode, error) {
 }
 
 func verifyTask(seed uint64, index uint64, result challengeResult) *big.Int {
+	start := time.Now().UnixMilli()
 	roots := make([]string, 0, 0)
-	for i := uint64(0); i < uint64(len(result.Paths)); i++ {
+	maxVerifyLeafCount := getMaxVerifyLeafCount(len(result.Paths))
+	verifyLeafCount := 0
+	for i := uint64(0); i < uint64(result.ChallengeCount); i++ {
 		path, exist := result.Paths[seed+i]
 		if !exist {
-			return nil
+			continue
 		}
 		success, rootHash := verifyTree(path)
 		if !success {
 			return nil
 		}
 		roots = append(roots, rootHash)
-		if rand.Intn(100) < 10 {
+		if rand.Intn(100) < 10 && verifyLeafCount < maxVerifyLeafCount {
 			success := verifyLeaf(seed+i, index, path)
-			if success {
+			verifyLeafCount++
+			if !success {
 				return nil
 			}
 		}
@@ -299,8 +313,12 @@ func verifyTask(seed uint64, index uint64, result challengeResult) *big.Int {
 	if err != nil {
 		return nil
 	}
+	log.Info("verifyTask", "taskId", result.TaskId, "cost mills", time.Now().UnixMilli()-start)
 	return new(big.Int).SetBytes(*node.Data)
+}
 
+func getMaxVerifyLeafCount(count int) int {
+	return 1 + count/1000
 }
 
 func submitIndex(commitUrl string, index uint64, blockNumber uint64, seed uint64) string {
@@ -333,19 +351,23 @@ func submitIndex(commitUrl string, index uint64, blockNumber uint64, seed uint64
 }
 
 func NewPorWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, finishCh *chan ChallengeFinishData) *porWorker {
-	porWorker := &porWorker{
-		config:        config,
-		chainConfig:   chainConfig,
-		engine:        engine,
-		eth:           eth,
-		chain:         eth.BlockChain(),
-		ChallengeChan: make(chan challengeTask, 10),
-		exitCh:        make(chan struct{}),
-		FinishCh:      finishCh,
-		LockList:      sync.Map{},
+	if chainConfig.Dpos != nil {
+		porWorker := &porWorker{
+			config:        config,
+			chainConfig:   chainConfig,
+			engine:        engine,
+			eth:           eth,
+			chain:         eth.BlockChain(),
+			ChallengeChan: make(chan challengeTask, 10),
+			exitCh:        make(chan struct{}),
+			FinishCh:      finishCh,
+			LockList:      sync.Map{},
+		}
+		go porWorker.mainLoop()
+		return porWorker
 	}
-	go porWorker.mainLoop()
-	return porWorker
+	return nil
+
 }
 
 func queryReady(commitUrl string, blockNumber uint64, seed uint64) string {
@@ -388,6 +410,7 @@ func (p *porWorker) challengeMainLoop(challenge challengeTask) {
 			blockTemp := p.chain.GetBlockByNumber(challenge.TaskBlockNumber)
 			txsReceipt := p.eth.BlockChain().GetReceiptsByHash(blockTemp.Hash())
 			if len(txsReceipt) == 0 {
+				log.Info("rollback transaction len 0", "provider", challenge.Provider, "seed", challenge.Seed)
 				return
 			}
 			seedByte := make([]byte, 8)
@@ -400,17 +423,17 @@ func (p *porWorker) challengeMainLoop(challenge challengeTask) {
 						isFound = true
 						break
 					} else {
-
+						log.Info("rollback transaction logs len 0", "provider", challenge.Provider, "seed", challenge.Seed)
 						return
 					}
 				}
 			}
 			if !isFound {
+				log.Info("rollback transaction not found", "provider", challenge.Provider, "seed", challenge.Seed)
 				return
 			} else {
 				break
 			}
-
 		}
 		time.Sleep(time.Second * 10)
 	}
@@ -420,7 +443,12 @@ func (p *porWorker) challengeMainLoop(challenge challengeTask) {
 	index := rand.Intn(challengeTreeNodeCount)
 	if res != "" {
 		for {
-			if state == 0 && queryReady(p.chain.Config().Dpos.ChallengeCommitUrl, challenge.TaskBlockNumber, challenge.Seed) == "success" {
+			readyRes := readyResult{}
+			if !readyRes.Ready {
+				res := queryReady(p.chain.Config().Dpos.ChallengeCommitUrl, challenge.TaskBlockNumber, challenge.Seed)
+				json.Unmarshal([]byte(res), &readyRes)
+			}
+			if state == 0 && readyRes.Ready {
 				if submitIndex(p.chain.Config().Dpos.ChallengeCommitUrl, uint64(index), challenge.TaskBlockNumber, challenge.Seed) != "" {
 					state = 1
 					startTime = time.Now()
@@ -432,7 +460,7 @@ func (p *porWorker) challengeMainLoop(challenge challengeTask) {
 					state = 2
 					challengeRes := challengeResult{}
 					json.Unmarshal([]byte(res), &challengeRes)
-					if challengeRes.Success && int64(len(challengeRes.Paths)) == challengeRes.ChallengeCount {
+					if challengeRes.Success {
 						//todo cal root hash
 						if (time.Now().Sub(startTime)) < 3*time.Minute {
 							var rootHash *big.Int
@@ -442,29 +470,30 @@ func (p *porWorker) challengeMainLoop(challenge challengeTask) {
 								rootHash = verifyTask(challenge.Seed, uint64(index), challengeRes)
 							}
 							if rootHash != nil {
+								log.Info("provider", challenge.Provider, "seed", challenge.Seed, "root hash", rootHash)
 								*p.FinishCh <- ChallengeFinishData{challengeState: Success, Seed: challenge.Seed, Provider: challenge.Provider, challengeAmount: uint64(challengeRes.ChallengeCount), rootHash: rootHash, Validator: challenge.Validator}
 							} else {
-
+								log.Info(" root hash is empty", "provider", challenge.Provider, "seed", challenge.Seed)
 								*p.FinishCh <- ChallengeFinishData{challengeState: Fail, Seed: challenge.Seed, Provider: challenge.Provider, challengeAmount: 0, rootHash: common.Big0, Validator: challenge.Validator}
-
 							}
 							break
 						} else {
+							log.Info("exceed 3 min", "provider", challenge.Provider, "seed", challenge.Seed)
 							*p.FinishCh <- ChallengeFinishData{challengeState: Fail, Seed: challenge.Seed, Provider: challenge.Provider, challengeAmount: 0, rootHash: common.Big0, Validator: challenge.Validator}
 							break
 						}
 					}
 				}
 				if (time.Now().Sub(startTime)) > 3*time.Minute {
+					log.Info("exceed 3 min", "provider", challenge.Provider, "seed", challenge.Seed)
 					*p.FinishCh <- ChallengeFinishData{challengeState: Fail, Seed: challenge.Seed, Provider: challenge.Provider, challengeAmount: 0, rootHash: common.Big0, Validator: challenge.Validator}
 					break
 				}
-
 			}
-
-			if (time.Now().Sub(startTime)) > 7*time.Minute {
+			timeout := 7*time.Minute + time.Duration(readyRes.ChallengeCount/3)*time.Second
+			if (time.Now().Sub(startTime)) > timeout {
 				// not response
-
+				log.Info("exceed", "provider", challenge.Provider, "seed", challenge.Seed)
 				*p.FinishCh <- ChallengeFinishData{challengeState: Fail, Seed: challenge.Seed, Provider: challenge.Provider, challengeAmount: 0, rootHash: common.Big0, Validator: challenge.Validator}
 				break
 			}

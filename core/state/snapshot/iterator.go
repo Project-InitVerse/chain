@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"sort"
 
-	"PureChain/common"
-	"PureChain/core/rawdb"
-	"PureChain/ethdb"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/ethdb"
 )
 
 // Iterator is an iterator to step over all the accounts or the specific
