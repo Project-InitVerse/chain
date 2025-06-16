@@ -464,6 +464,24 @@ func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 	return t.heads[0]
 }
 
+// HashDifference returns a new set which is the difference between a and b.
+func HashDifference(a, b []common.Hash) []common.Hash {
+	keep := make([]common.Hash, 0, len(a))
+
+	remove := make(map[common.Hash]struct{})
+	for _, hash := range b {
+		remove[hash] = struct{}{}
+	}
+
+	for _, hash := range a {
+		if _, ok := remove[hash]; !ok {
+			keep = append(keep, hash)
+		}
+	}
+
+	return keep
+}
+
 // Shift replaces the current best head with the next one from the same account.
 func (t *TransactionsByPriceAndNonce) Shift() {
 	acc, _ := Sender(t.signer, t.heads[0])
