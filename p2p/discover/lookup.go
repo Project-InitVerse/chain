@@ -18,6 +18,7 @@ package discover
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Project-InitVerse/chain/common/gopool"
@@ -144,7 +145,7 @@ func (it *lookup) slowdown() {
 func (it *lookup) query(n *node, reply chan<- []*node) {
 	fails := it.tab.db.FindFails(n.ID(), n.IP())
 	r, err := it.queryfunc(n)
-	if err == errClosed {
+	if errors.Is(err, errClosed) {
 		// Avoid recording failures on shutdown.
 		reply <- nil
 		return

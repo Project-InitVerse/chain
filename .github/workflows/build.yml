@@ -6,12 +6,10 @@ name: Build
 on:
   push:
     branches:
-      - "master"
-      - "genesis-testnet"
+      - "main"
   pull_request:
     branches:
-    - "master"
-    - "genesis-testnet"
+    - "main"
   workflow_dispatch:
 
 env:
