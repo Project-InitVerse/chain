@@ -329,7 +329,7 @@ func (Inihash *Inihash) GetBlockReward(blockHeight uint64) *big.Int {
 	if Inihash.chainId == nil {
 		return CalBlockReward(blockHeight, 1, -1, 1)
 	} else if Inihash.chainId.Int64() == 7233 {
-		return CalBlockReward(blockHeight, 50, -1, 1)
+		return CalBlockReward(blockHeight, 50, params.MainnetForkBlockNumber, 3)
 	} else if Inihash.chainId.Int64() == 7234 {
 		return CalBlockReward(blockHeight, 1, params.TestnetForkBlockNumber, 3)
 	} else {

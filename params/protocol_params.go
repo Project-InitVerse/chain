@@ -158,4 +158,5 @@ var (
 )
 var (
 	TestnetForkBlockNumber int64 = 605000
+	MainnetForkBlockNumber int64 = 564480
 )

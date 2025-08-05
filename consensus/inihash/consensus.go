@@ -346,6 +346,13 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 			return calcDifficulty(time, parent)
 		}
 
+	} else if config.ChainID.Int64() == 7233 {
+		//mainnet
+		if parent.Number.Int64() >= params.MainnetForkBlockNumber {
+			return calcDifficultyNew(time, parent)
+		} else {
+			return calcDifficulty(time, parent)
+		}
 	}
 	return calcDifficulty(time, parent)
 }
@@ -560,7 +567,7 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	var blockReward *big.Int
 	if config.ChainID.Int64() == 7233 {
 		//mainnet
-		blockReward = CalBlockReward(header.Number.Uint64(), 50, -1, 1)
+		blockReward = CalBlockReward(header.Number.Uint64(), 50, params.MainnetForkBlockNumber, 3)
 	} else if config.ChainID.Int64() == 7234 {
 		blockReward = CalBlockReward(header.Number.Uint64(), 1, params.TestnetForkBlockNumber, 3)
 	} else {
