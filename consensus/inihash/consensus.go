@@ -68,15 +68,38 @@ func (inihash *Inihash) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
 }
 
-func CalBlockReward(blockNumber uint64, multi uint64) *big.Int {
-	epoch := (blockNumber/20160)*20160 + 20160
-	rate := math.Pow(math.E, float64(epoch)*float64(-0.00000012096))
-	rateStr := fmt.Sprintf("%.9f", rate)
-	rateDecimal, _ := decimal.NewFromString(rateStr)
+func CalBlockReward(blockNumber uint64, multi uint64, forkBlock int64, forkMulti uint64) *big.Int {
+	if forkBlock == -1 {
+		epoch := (blockNumber/20160)*20160 + 20160
+		rate := math.Pow(math.E, float64(epoch)*float64(-0.00000012096))
+		rateStr := fmt.Sprintf("%.9f", rate)
+		rateDecimal, _ := decimal.NewFromString(rateStr)
 
-	rewardTmp := decimal.NewFromBigInt(BaseBlockReward, 0).Mul(rateDecimal).Mul(decimal.NewFromUint64(multi))
+		rewardTmp := decimal.NewFromBigInt(BaseBlockReward, 0).Mul(rateDecimal).Mul(decimal.NewFromUint64(multi))
 
-	return rewardTmp.BigInt()
+		return rewardTmp.BigInt()
+	} else {
+		convertBlock := blockNumber
+		isMulit := false
+		if blockNumber > uint64(forkBlock) {
+			isMulit = true
+			convertBlock = (blockNumber-uint64(forkBlock))/forkMulti + uint64(forkBlock) + 1
+		}
+
+		epoch := (convertBlock/20160)*20160 + 20160
+		rate := math.Pow(math.E, float64(epoch)*float64(-0.00000012096))
+		rateStr := fmt.Sprintf("%.9f", rate)
+		rateDecimal, _ := decimal.NewFromString(rateStr)
+		if isMulit {
+			rewardTmp := decimal.NewFromBigInt(BaseBlockReward, 0).Mul(rateDecimal).Mul(decimal.NewFromUint64(multi)).Div(decimal.NewFromUint64(forkMulti))
+			return rewardTmp.BigInt()
+		} else {
+			rewardTmp := decimal.NewFromBigInt(BaseBlockReward, 0).Mul(rateDecimal).Mul(decimal.NewFromUint64(multi))
+			return rewardTmp.BigInt()
+		}
+
+	}
+
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
@@ -314,8 +337,24 @@ func (inihash *Inihash) CalcDifficulty(chain consensus.ChainHeaderReader, time u
 // given the parent block's time and difficulty.
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	//next := new(big.Int).Add(parent.Number, big1)
-	return calcDifficulty(time, parent)
+	if config.ChainID == nil {
+		return calcDifficulty(time, parent)
+	} else if config.ChainID.Int64() == 7234 {
+		if parent.Number.Int64() >= params.TestnetForkBlockNumber {
+			return calcDifficultyNew(time, parent)
+		} else {
+			return calcDifficulty(time, parent)
+		}
 
+	} else if config.ChainID.Int64() == 7233 {
+		//mainnet
+		if parent.Number.Int64() >= params.MainnetForkBlockNumber {
+			return calcDifficultyNew(time, parent)
+		} else {
+			return calcDifficulty(time, parent)
+		}
+	}
+	return calcDifficulty(time, parent)
 }
 
 // Some weird constants to avoid constant memory allocs for them.
@@ -328,6 +367,7 @@ var (
 	big9          = big.NewInt(9)
 	big10         = big.NewInt(10)
 	bigMinus599   = big.NewInt(-599)
+	bigMinus99    = big.NewInt(-99)
 )
 
 // calcDifficultyHomestead is the difficulty adjustment algorithm. It returns
@@ -354,6 +394,41 @@ func calcDifficulty(time uint64, parent *types.Header) *big.Int {
 	}
 	// (parent_diff + parent_diff // 12288 * max(1 - (block_timestamp - parent_timestamp) // 5, -599))
 	y.Div(parent.Difficulty, params.DifficultyBoundDivisor)
+	x.Mul(y, x)
+	x.Add(parent.Difficulty, x)
+
+	// minimum difficulty can ever be (before exponential factor)
+	if x.Cmp(params.MinimumDifficulty) < 0 {
+		x.Set(params.MinimumDifficulty)
+	}
+
+	return x
+}
+
+// calcDifficultyHomestead is the difficulty adjustment algorithm. It returns
+// the difficulty that a new block should have when created at time given the
+// parent block's time and difficulty. The calculation uses the Homestead rules.
+func calcDifficultyNew(time uint64, parent *types.Header) *big.Int {
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
+	// algorithm:
+	// diff = (parent_diff +
+	//         (parent_diff / 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
+	//        )
+	bigTime := new(big.Int).SetUint64(time)
+	bigParentTime := new(big.Int).SetUint64(parent.Time)
+	// holds intermediate values to make the algo easier to read & audit
+	x := new(big.Int)
+	y := new(big.Int)
+	// 1 - (block_timestamp - parent_timestamp) // 10
+	x.Sub(bigTime, bigParentTime)
+	x.Div(x, big10)
+	x.Sub(big1, x)
+	// max(1 - (block_timestamp - parent_timestamp) // 5, -599)
+	if x.Cmp(bigMinus99) < 0 {
+		x.Set(bigMinus99)
+	}
+	// (parent_diff + parent_diff // 12288 * max(1 - (block_timestamp - parent_timestamp) // 5, -599))
+	y.Div(parent.Difficulty, params.NewDifficultyBoundDivisor)
 	x.Mul(y, x)
 	x.Add(parent.Difficulty, x)
 
@@ -492,9 +567,11 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	var blockReward *big.Int
 	if config.ChainID.Int64() == 7233 {
 		//mainnet
-		blockReward = CalBlockReward(header.Number.Uint64(), 50)
+		blockReward = CalBlockReward(header.Number.Uint64(), 50, params.MainnetForkBlockNumber, 3)
+	} else if config.ChainID.Int64() == 7234 {
+		blockReward = CalBlockReward(header.Number.Uint64(), 1, params.TestnetForkBlockNumber, 3)
 	} else {
-		blockReward = CalBlockReward(header.Number.Uint64(), 1)
+		blockReward = CalBlockReward(header.Number.Uint64(), 1, -1, 1)
 	}
 
 	// Accumulate the rewards for the miner and any included uncles
