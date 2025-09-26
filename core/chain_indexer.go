@@ -19,6 +19,7 @@ package core
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -75,7 +76,7 @@ type ChainIndexer struct {
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
-	active    uint32          // Flag whether the event loop was started
+	active    atomic.Bool     // Flag whether the event loop was started
 	update    chan struct{}   // Notification channel that headers should be processed
 	quit      chan chan error // Quit channel to tear down running goroutines
 	ctx       context.Context
@@ -166,7 +167,7 @@ func (c *ChainIndexer) Close() error {
 		errs = append(errs, err)
 	}
 	// If needed, tear down the secondary event loop
-	if atomic.LoadUint32(&c.active) != 0 {
+	if c.active.Load() {
 		c.quit <- errc
 		if err := <-errc; err != nil {
 			errs = append(errs, err)
@@ -196,7 +197,7 @@ func (c *ChainIndexer) Close() error {
 // queue.
 func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainHeadEvent, sub event.Subscription) {
 	// Mark the chain indexer as active, requiring an additional teardown
-	atomic.StoreUint32(&c.active, 1)
+	c.active.Store(true)
 
 	defer sub.Unsubscribe()
 
@@ -221,20 +222,19 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 				errc <- nil
 				return
 			}
-			header := ev.Block.Header()
-			if header.ParentHash != prevHash {
+			if ev.Header.ParentHash != prevHash {
 				// Reorg to the common ancestor if needed (might not exist in light sync mode, skip reorg then)
 				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?
 
 				if rawdb.ReadCanonicalHash(c.chainDb, prevHeader.Number.Uint64()) != prevHash {
-					if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
+					if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, ev.Header); h != nil {
 						c.newHead(h.Number.Uint64(), true)
 					}
 				}
 			}
-			c.newHead(header.Number.Uint64(), false)
+			c.newHead(ev.Header.Number.Uint64(), false)
 
-			prevHeader, prevHash = header, header.Hash()
+			prevHeader, prevHash = ev.Header, ev.Header.Hash()
 		}
 	}
 }
@@ -403,7 +403,7 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 		if header == nil {
 			return common.Hash{}, fmt.Errorf("block #%d [%x..] not found", number, hash[:4])
 		} else if header.ParentHash != lastHead {
-			return common.Hash{}, fmt.Errorf("chain reorged during section processing")
+			return common.Hash{}, errors.New("chain reorged during section processing")
 		}
 		if err := c.backend.Process(c.ctx, header); err != nil {
 			return common.Hash{}, err

@@ -29,8 +29,6 @@ import (
 // NotFound is returned by API methods if the requested item does not exist.
 var NotFound = errors.New("not found")
 
-// TODO: move subscription to package event
-
 // Subscription represents an event subscription where events are
 // delivered on a data channel.
 type Subscription interface {
@@ -101,8 +99,39 @@ type SyncProgress struct {
 	StartingBlock uint64 // Block number where sync began
 	CurrentBlock  uint64 // Current block number where sync is at
 	HighestBlock  uint64 // Highest alleged block number in the chain
-	PulledStates  uint64 // Number of state trie entries already downloaded
-	KnownStates   uint64 // Total number of state trie entries known about
+
+	// "fast sync" fields. These used to be sent by geth, but are no longer used
+	// since version v1.10.
+	PulledStates uint64 // Number of state trie entries already downloaded
+	KnownStates  uint64 // Total number of state trie entries known about
+
+	// "snap sync" fields.
+	SyncedAccounts      uint64 // Number of accounts downloaded
+	SyncedAccountBytes  uint64 // Number of account trie bytes persisted to disk
+	SyncedBytecodes     uint64 // Number of bytecodes downloaded
+	SyncedBytecodeBytes uint64 // Number of bytecode bytes downloaded
+	SyncedStorage       uint64 // Number of storage slots downloaded
+	SyncedStorageBytes  uint64 // Number of storage trie bytes persisted to disk
+
+	HealedTrienodes     uint64 // Number of state trie nodes downloaded
+	HealedTrienodeBytes uint64 // Number of state trie bytes persisted to disk
+	HealedBytecodes     uint64 // Number of bytecodes downloaded
+	HealedBytecodeBytes uint64 // Number of bytecodes persisted to disk
+
+	HealingTrienodes uint64 // Number of state trie nodes pending
+	HealingBytecode  uint64 // Number of bytecodes pending
+
+	// "transaction indexing" fields
+	TxIndexFinishedBlocks  uint64 // Number of blocks whose transactions are already indexed
+	TxIndexRemainingBlocks uint64 // Number of blocks whose transactions are not indexed yet
+}
+
+// Done returns the indicator if the initial sync is finished or not.
+func (prog SyncProgress) Done() bool {
+	if prog.CurrentBlock < prog.HighestBlock {
+		return false
+	}
+	return prog.TxIndexRemainingBlocks == 0
 }
 
 // ChainSyncReader wraps access to the node's current sync status. If there's no
@@ -113,14 +142,23 @@ type ChainSyncReader interface {
 
 // CallMsg contains parameters for contract calls.
 type CallMsg struct {
-	From     common.Address  // the sender of the 'transaction'
-	To       *common.Address // the destination contract (nil for contract creation)
-	Gas      uint64          // if 0, the call executes with near-infinite gas
-	GasPrice *big.Int        // wei <-> gas exchange ratio
-	Value    *big.Int        // amount of wei sent along with the call
-	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+	From      common.Address  // the sender of the 'transaction'
+	To        *common.Address // the destination contract (nil for contract creation)
+	Gas       uint64          // if 0, the call executes with near-infinite gas
+	GasPrice  *big.Int        // wei <-> gas exchange ratio
+	GasFeeCap *big.Int        // EIP-1559 fee cap per gas.
+	GasTipCap *big.Int        // EIP-1559 tip per gas.
+	Value     *big.Int        // amount of wei sent along with the call
+	Data      []byte          // input data, usually an ABI-encoded contract method invocation
 
 	AccessList types.AccessList // EIP-2930 access list.
+
+	// For BlobTxType
+	BlobGasFeeCap *big.Int
+	BlobHashes    []common.Hash
+
+	// For SetCodeTxType
+	AuthorizationList []types.SetCodeAuthorization
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by
@@ -180,6 +218,25 @@ type GasPricer interface {
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
 }
 
+// GasPricer1559 provides access to the EIP-1559 gas price oracle.
+type GasPricer1559 interface {
+	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
+}
+
+// FeeHistoryReader provides access to the fee history oracle.
+type FeeHistoryReader interface {
+	FeeHistory(ctx context.Context, blockCount uint64, lastBlock *big.Int, rewardPercentiles []float64) (*FeeHistory, error)
+}
+
+// FeeHistory provides recent fee market data that consumers can use to determine
+// a reasonable maxPriorityFeePerGas value.
+type FeeHistory struct {
+	OldestBlock  *big.Int     // block corresponding to first response value
+	Reward       [][]*big.Int // list every txs priority fee per block
+	BaseFee      []*big.Int   // list of each block's base fee
+	GasUsedRatio []float64    // ratio of gas used out of the total available limit
+}
+
 // A PendingStateReader provides access to the pending state, which is the result of all
 // known executable transactions which have not yet been included in the blockchain. It is
 // commonly used to display the result of ’unconfirmed’ actions (e.g. wallet value
@@ -210,4 +267,14 @@ type GasEstimator interface {
 // pending state.
 type PendingStateEventer interface {
 	SubscribePendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (Subscription, error)
+}
+
+// BlockNumberReader provides access to the current block number.
+type BlockNumberReader interface {
+	BlockNumber(ctx context.Context) (uint64, error)
+}
+
+// ChainIDReader provides access to the chain ID.
+type ChainIDReader interface {
+	ChainID(ctx context.Context) (*big.Int, error)
 }

@@ -1,4 +1,4 @@
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/common/gopool"
 	"github.com/Project-InitVerse/chain/core/forkid"
+	"github.com/Project-InitVerse/chain/metrics"
 	"github.com/Project-InitVerse/chain/p2p"
 )
 
@@ -35,7 +37,7 @@ const (
 
 // Handshake executes the eth protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
-func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash, forkID forkid.ID, forkFilter forkid.Filter) error {
+func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis common.Hash, forkID forkid.ID, forkFilter forkid.Filter, extension *UpgradeStatusExtension) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)
 
@@ -60,13 +62,58 @@ func (p *Peer) Handshake(network uint64, td *big.Int, head common.Hash, genesis 
 		select {
 		case err := <-errc:
 			if err != nil {
+				markError(p, err)
 				return err
 			}
 		case <-timeout.C:
+			markError(p, p2p.DiscReadTimeout)
 			return p2p.DiscReadTimeout
 		}
 	}
 	p.td, p.head = status.TD, status.Head
+
+	//if p.version >= ETH68 {
+	//	var upgradeStatus UpgradeStatusPacket // safe to read after two values have been received from errc
+	//	if extension == nil {
+	//		extension = &UpgradeStatusExtension{}
+	//	}
+	//	extensionRaw, err := extension.Encode()
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	gopool.Submit(func() {
+	//		errc <- p2p.Send(p.rw, UpgradeStatusMsg, &UpgradeStatusPacket{
+	//			Extension: extensionRaw,
+	//		})
+	//	})
+	//	gopool.Submit(func() {
+	//		errc <- p.readUpgradeStatus(&upgradeStatus)
+	//	})
+	//	timeout := time.NewTimer(handshakeTimeout)
+	//	defer timeout.Stop()
+	//	for i := 0; i < 2; i++ {
+	//		select {
+	//		case err := <-errc:
+	//			if err != nil {
+	//				return err
+	//			}
+	//		case <-timeout.C:
+	//			return p2p.DiscReadTimeout
+	//		}
+	//	}
+	//
+	//	extension, err := upgradeStatus.GetExtension()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	p.statusExtension = extension
+	//
+	//	if p.statusExtension.DisablePeerTxBroadcast {
+	//		p.Log().Debug("peer does not need broadcast txs, closing broadcast routines")
+	//		p.CloseTxBroadcast()
+	//	}
+	//}
 
 	// TD at mainnet block #7753254 is 76 bits. If it becomes 100 million times
 	// larger, it will still fit within 100 bits
@@ -105,4 +152,44 @@ func (p *Peer) readStatus(network uint64, status *StatusPacket, genesis common.H
 		return fmt.Errorf("%w: %v", errForkIDRejected, err)
 	}
 	return nil
+}
+
+//
+//func (p *Peer) readUpgradeStatus(status *UpgradeStatusPacket) error {
+//	msg, err := p.rw.ReadMsg()
+//	if err != nil {
+//		return err
+//	}
+//	if msg.Code != UpgradeStatusMsg {
+//		return fmt.Errorf("%w: upgrade status msg has code %x (!= %x)", errNoStatusMsg, msg.Code, UpgradeStatusMsg)
+//	}
+//	if msg.Size > maxMessageSize {
+//		return fmt.Errorf("%w: %v > %v", errMsgTooLarge, msg.Size, maxMessageSize)
+//	}
+//	if err := msg.Decode(&status); err != nil {
+//		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+//	}
+//	return nil
+//}
+
+// markError registers the error with the corresponding metric.
+func markError(p *Peer, err error) {
+	if !metrics.Enabled() {
+		return
+	}
+	m := meters.get(p.Inbound())
+	switch errors.Unwrap(err) {
+	case errNetworkIDMismatch:
+		m.networkIDMismatch.Mark(1)
+	case errProtocolVersionMismatch:
+		m.protocolVersionMismatch.Mark(1)
+	case errGenesisMismatch:
+		m.genesisMismatch.Mark(1)
+	case errForkIDRejected:
+		m.forkidRejected.Mark(1)
+	case p2p.DiscReadTimeout:
+		m.timeoutError.Mark(1)
+	default:
+		m.peerError.Mark(1)
+	}
 }

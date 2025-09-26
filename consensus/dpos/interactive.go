@@ -4,6 +4,7 @@ import (
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
 	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
 )
 
 ////
@@ -48,5 +49,8 @@ func (cc *minimalChainContext) Engine() consensus.Engine {
 }
 
 func (cc *minimalChainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
+	return nil
+}
+func (cc *minimalChainContext) Config() *params.ChainConfig {
 	return nil
 }

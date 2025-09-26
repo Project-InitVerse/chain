@@ -27,9 +27,12 @@ import (
 
 var indices = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "[17]"}
 
+type TrieNode = node
+type TrieFullNode = fullNode
 type node interface {
-	fstring(string) string
 	cache() (hashNode, bool)
+	encode(w rlp.EncoderBuffer)
+	fstring(string) string
 }
 
 type (
@@ -44,6 +47,27 @@ type (
 	}
 	hashNode  []byte
 	valueNode []byte
+
+	// fullnodeEncoder is a type used exclusively for encoding fullNode.
+	// Briefly instantiating a fullnodeEncoder and initializing with
+	// existing slices is less memory intense than using the fullNode type.
+	fullnodeEncoder struct {
+		Children [17][]byte
+	}
+
+	// extNodeEncoder is a type used exclusively for encoding extension node.
+	// Briefly instantiating a extNodeEncoder and initializing with existing
+	// slices is less memory intense than using the shortNode type.
+	extNodeEncoder struct {
+		Key []byte
+		Val []byte
+	}
+
+	// leafNodeEncoder is a type used exclusively for encoding leaf node.
+	leafNodeEncoder struct {
+		Key []byte
+		Val []byte
+	}
 )
 
 // nilValueNode is used when collapsing internal trie nodes for hashing, since
@@ -52,16 +76,9 @@ var nilValueNode = valueNode(nil)
 
 // EncodeRLP encodes a full node into the consensus RLP format.
 func (n *fullNode) EncodeRLP(w io.Writer) error {
-	var nodes [17]node
-
-	for i, child := range &n.Children {
-		if child != nil {
-			nodes[i] = child
-		} else {
-			nodes[i] = nilValueNode
-		}
-	}
-	return rlp.Encode(w, nodes)
+	eb := rlp.NewEncoderBuffer(w)
+	n.encode(eb)
+	return eb.Flush()
 }
 
 func (n *fullNode) copy() *fullNode   { copy := *n; return &copy }
@@ -95,6 +112,7 @@ func (n *fullNode) fstring(ind string) string {
 	}
 	return resp + fmt.Sprintf("\n%s] ", ind)
 }
+
 func (n *shortNode) fstring(ind string) string {
 	return fmt.Sprintf("{%x: %v} ", n.Key, n.Val.fstring(ind+"  "))
 }
@@ -105,6 +123,12 @@ func (n valueNode) fstring(ind string) string {
 	return fmt.Sprintf("%x ", []byte(n))
 }
 
+func NodeString(hash, buf []byte) string {
+	node := mustDecodeNode(hash, buf)
+	return node.fstring("NodeString: ")
+}
+
+// mustDecodeNode is a wrapper of decodeNode and panic if any error is encountered.
 func mustDecodeNode(hash, buf []byte) node {
 	n, err := decodeNode(hash, buf)
 	if err != nil {
@@ -113,8 +137,29 @@ func mustDecodeNode(hash, buf []byte) node {
 	return n
 }
 
-// decodeNode parses the RLP encoding of a trie node.
+// mustDecodeNodeUnsafe is a wrapper of decodeNodeUnsafe and panic if any error is
+// encountered.
+func mustDecodeNodeUnsafe(hash, buf []byte) node {
+	n, err := decodeNodeUnsafe(hash, buf)
+	if err != nil {
+		panic(fmt.Sprintf("node %x: %v", hash, err))
+	}
+	return n
+}
+
+// decodeNode parses the RLP encoding of a trie node. It will deep-copy the passed
+// byte slice for decoding, so it's safe to modify the byte slice afterwards. The-
+// decode performance of this function is not optimal, but it is suitable for most
+// scenarios with low performance requirements and hard to determine whether the
+// byte slice be modified or not.
 func decodeNode(hash, buf []byte) (node, error) {
+	return decodeNodeUnsafe(hash, common.CopyBytes(buf))
+}
+
+// decodeNodeUnsafe parses the RLP encoding of a trie node. The passed byte slice
+// will be directly referenced by node without bytes deep copy, so the input MUST
+// not be changed after.
+func decodeNodeUnsafe(hash, buf []byte) (node, error) {
 	if len(buf) == 0 {
 		return nil, io.ErrUnexpectedEOF
 	}
@@ -147,7 +192,7 @@ func decodeShort(hash, elems []byte) (node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid value node: %v", err)
 		}
-		return &shortNode{key, append(valueNode{}, val...), flag}, nil
+		return &shortNode{key, valueNode(val), flag}, nil
 	}
 	r, _, err := decodeRef(rest)
 	if err != nil {
@@ -170,7 +215,7 @@ func decodeFull(hash, elems []byte) (*fullNode, error) {
 		return n, err
 	}
 	if len(val) > 0 {
-		n.Children[16] = append(valueNode{}, val...)
+		n.Children[16] = valueNode(val)
 	}
 	return n, nil
 }
@@ -196,7 +241,7 @@ func decodeRef(buf []byte) (node, []byte, error) {
 		// empty node
 		return nil, rest, nil
 	case kind == rlp.String && len(val) == 32:
-		return append(hashNode{}, val...), rest, nil
+		return hashNode(val), rest, nil
 	default:
 		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(val))
 	}

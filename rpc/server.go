@@ -18,14 +18,17 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"io"
+	"net"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Project-InitVerse/chain/log"
-	mapset "github.com/deckarep/golang-set"
 )
 
 const MetadataApi = "rpc"
+const EngineApi = "engine"
 
 // CodecOption specifies which type of messages a codec supports.
 //
@@ -44,13 +47,23 @@ const (
 type Server struct {
 	services serviceRegistry
 	idgen    func() ID
-	run      int32
-	codecs   mapset.Set
+
+	mutex              sync.Mutex
+	codecs             map[ServerCodec]struct{}
+	run                atomic.Bool
+	batchItemLimit     int
+	batchResponseLimit int
+	httpBodyLimit      int
 }
 
 // NewServer creates a new server instance with no registered handlers.
 func NewServer() *Server {
-	server := &Server{idgen: randomIDGenerator(), codecs: mapset.NewSet(), run: 1}
+	server := &Server{
+		idgen:         randomIDGenerator(),
+		codecs:        make(map[ServerCodec]struct{}),
+		httpBodyLimit: defaultBodyLimit,
+	}
+	server.run.Store(true)
 	// Register the default service providing meta information about the RPC service such
 	// as the services and methods it offers.
 	rpcService := &RPCService{server}
@@ -58,8 +71,26 @@ func NewServer() *Server {
 	return server
 }
 
+// SetBatchLimits sets limits applied to batch requests. There are two limits: 'itemLimit'
+// is the maximum number of items in a batch. 'maxResponseSize' is the maximum number of
+// response bytes across all requests in a batch.
+//
+// This method should be called before processing any requests via ServeCodec, ServeHTTP,
+// ServeListener etc.
+func (s *Server) SetBatchLimits(itemLimit, maxResponseSize int) {
+	s.batchItemLimit = itemLimit
+	s.batchResponseLimit = maxResponseSize
+}
+
+// SetHTTPBodyLimit sets the size limit for HTTP requests.
+//
+// This method should be called before processing any requests via ServeHTTP.
+func (s *Server) SetHTTPBodyLimit(limit int) {
+	s.httpBodyLimit = limit
+}
+
 // RegisterName creates a service for the given receiver type under the given name. When no
-// methods on the given receiver match the criteria to be either a RPC method or a
+// methods on the given receiver match the criteria to be either an RPC method or a
 // subscription an error is returned. Otherwise a new service is created and added to the
 // service collection this server provides to clients.
 func (s *Server) RegisterName(name string, receiver interface{}) error {
@@ -74,18 +105,37 @@ func (s *Server) RegisterName(name string, receiver interface{}) error {
 func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	defer codec.close()
 
-	// Don't serve if server is stopped.
-	if atomic.LoadInt32(&s.run) == 0 {
+	if !s.trackCodec(codec) {
 		return
 	}
+	defer s.untrackCodec(codec)
 
-	// Add the codec to the set so it can be closed by Stop.
-	s.codecs.Add(codec)
-	defer s.codecs.Remove(codec)
-
-	c := initClient(codec, s.idgen, &s.services)
+	cfg := &clientConfig{
+		idgen:              s.idgen,
+		batchItemLimit:     s.batchItemLimit,
+		batchResponseLimit: s.batchResponseLimit,
+	}
+	c := initClient(codec, &s.services, cfg)
 	<-codec.closed()
 	c.Close()
+}
+
+func (s *Server) trackCodec(codec ServerCodec) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if !s.run.Load() {
+		return false // Don't serve if server is stopped.
+	}
+	s.codecs[codec] = struct{}{}
+	return true
+}
+
+func (s *Server) untrackCodec(codec ServerCodec) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	delete(s.codecs, codec)
 }
 
 // serveSingleRequest reads and processes a single RPC request from the given codec. This
@@ -93,18 +143,19 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 // this mode.
 func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
 	// Don't serve if server is stopped.
-	if atomic.LoadInt32(&s.run) == 0 {
+	if !s.run.Load() {
 		return
 	}
 
-	h := newHandler(ctx, codec, s.idgen, &s.services)
+	h := newHandler(ctx, codec, s.idgen, &s.services, s.batchItemLimit, s.batchResponseLimit)
 	h.allowSubscribe = false
 	defer h.close(io.EOF, nil)
 
 	reqs, batch, err := codec.readBatch()
 	if err != nil {
-		if err != io.EOF {
-			codec.writeJSON(ctx, errorMessage(&invalidMessageError{"parse error"}))
+		if msg := messageForReadError(err); msg != "" {
+			resp := errorMessage(&invalidMessageError{msg})
+			codec.writeJSON(ctx, resp, true)
 		}
 		return
 	}
@@ -115,16 +166,32 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
 	}
 }
 
+func messageForReadError(err error) string {
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return "read timeout"
+		} else {
+			return "read error"
+		}
+	} else if err != io.EOF {
+		return "parse error"
+	}
+	return ""
+}
+
 // Stop stops reading new requests, waits for stopPendingRequestTimeout to allow pending
 // requests to finish, then closes all codecs which will cancel pending requests and
 // subscriptions.
 func (s *Server) Stop() {
-	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.run.CompareAndSwap(true, false) {
 		log.Debug("RPC server shutting down")
-		s.codecs.Each(func(c interface{}) bool {
-			c.(ServerCodec).close()
-			return true
-		})
+		for codec := range s.codecs {
+			codec.close()
+		}
 	}
 }
 
@@ -144,4 +211,39 @@ func (s *RPCService) Modules() map[string]string {
 		modules[name] = "1.0"
 	}
 	return modules
+}
+
+// PeerInfo contains information about the remote end of the network connection.
+//
+// This is available within RPC method handlers through the context. Call
+// PeerInfoFromContext to get information about the client connection related to
+// the current method call.
+type PeerInfo struct {
+	// Transport is name of the protocol used by the client.
+	// This can be "http", "ws" or "ipc".
+	Transport string
+
+	// Address of client. This will usually contain the IP address and port.
+	RemoteAddr string
+
+	// Additional information for HTTP and WebSocket connections.
+	HTTP struct {
+		// Protocol version, i.e. "HTTP/1.1". This is not set for WebSocket.
+		Version string
+		// Header values sent by the client.
+		UserAgent string
+		Origin    string
+		Host      string
+	}
+}
+
+type peerInfoContextKey struct{}
+
+// PeerInfoFromContext returns information about the client's network connection.
+// Use this with the context passed to RPC method handler functions.
+//
+// The zero value is returned if no connection info is present in ctx.
+func PeerInfoFromContext(ctx context.Context) PeerInfo {
+	info, _ := ctx.Value(peerInfoContextKey{}).(PeerInfo)
+	return info
 }

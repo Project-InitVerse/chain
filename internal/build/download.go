@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -37,11 +36,11 @@ type ChecksumDB struct {
 
 // MustLoadChecksums loads a file containing checksums.
 func MustLoadChecksums(file string) *ChecksumDB {
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatal("can't load checksum file: " + err.Error())
 	}
-	return &ChecksumDB{strings.Split(string(content), "\n")}
+	return &ChecksumDB{strings.Split(strings.ReplaceAll(string(content), "\r\n", "\n"), "\n")}
 }
 
 // Verify checks whether the given file is valid according to the checksum database.
@@ -58,7 +57,7 @@ func (db *ChecksumDB) Verify(path string) error {
 	}
 	fileHash := hex.EncodeToString(h.Sum(nil))
 	if !db.findHash(filepath.Base(path), fileHash) {
-		return fmt.Errorf("invalid file hash %s", fileHash)
+		return fmt.Errorf("invalid file hash: %s %s", fileHash, filepath.Base(path))
 	}
 	return nil
 }
@@ -85,10 +84,12 @@ func (db *ChecksumDB) DownloadFile(url, dstPath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("download error: %v", err)
-	} else if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download error: status %d", resp.StatusCode)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download error: status %d", resp.StatusCode)
+	}
 	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
 		return err
 	}
@@ -102,7 +103,6 @@ func (db *ChecksumDB) DownloadFile(url, dstPath string) error {
 	if err != nil {
 		return err
 	}
-
 	return db.Verify(dstPath)
 }
 

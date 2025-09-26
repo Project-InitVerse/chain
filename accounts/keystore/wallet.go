@@ -19,7 +19,7 @@ package keystore
 import (
 	"math/big"
 
-	"github.com/Project-InitVerse/chain"
+	ethereum "github.com/Project-InitVerse/chain"
 	"github.com/Project-InitVerse/chain/accounts"
 	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/crypto"

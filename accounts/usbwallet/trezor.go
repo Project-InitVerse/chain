@@ -33,7 +33,7 @@ import (
 	"github.com/Project-InitVerse/chain/common/hexutil"
 	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/log"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // ErrTrezorPINNeeded is returned if opening the trezor requires a PIN code. In
@@ -196,10 +196,10 @@ func (w *trezorDriver) trezorDerive(derivationPath []uint32) (common.Address, er
 	if _, err := w.trezorExchange(&trezor.EthereumGetAddress{AddressN: derivationPath}, address); err != nil {
 		return common.Address{}, err
 	}
-	if addr := address.GetAddressBin(); len(addr) > 0 { // Older firmwares use binary fomats
+	if addr := address.GetAddressBin(); len(addr) > 0 { // Older firmwares use binary formats
 		return common.BytesToAddress(addr), nil
 	}
-	if addr := address.GetAddressHex(); len(addr) > 0 { // Newer firmwares use hexadecimal fomats
+	if addr := address.GetAddressHex(); len(addr) > 0 { // Newer firmwares use hexadecimal formats
 		return common.HexToAddress(addr), nil
 	}
 	return common.Address{}, errors.New("missing derived address")

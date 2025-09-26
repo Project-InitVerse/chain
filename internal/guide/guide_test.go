@@ -23,9 +23,7 @@
 package guide
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -37,12 +35,10 @@ import (
 
 // Tests that the account management snippets work correctly.
 func TestAccountManagement(t *testing.T) {
+	t.Parallel()
+
 	// Create a temporary folder to work with
-	workdir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Failed to create temporary work dir: %v", err)
-	}
-	defer os.RemoveAll(workdir)
+	workdir := t.TempDir()
 
 	// Create an encrypted keystore (using light scrypt parameters)
 	ks := keystore.NewKeyStore(filepath.Join(workdir, "keystore"), keystore.LightScryptN, keystore.LightScryptP)

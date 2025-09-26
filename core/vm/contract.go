@@ -17,10 +17,20 @@
 package vm
 
 import (
-	"math/big"
-
 	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/tracing"
+	"github.com/Project-InitVerse/chain/metrics"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/holiman/uint256"
+)
+
+const codeBitmapCacheSize = 2000
+
+var (
+	codeBitmapCache, _ = lru.New(codeBitmapCacheSize)
+
+	contractCodeBitmapHitMeter  = metrics.NewRegisteredMeter("vm/contract/code/bitmap/hit", nil)
+	contractCodeBitmapMissMeter = metrics.NewRegisteredMeter("vm/contract/code/bitmap/miss", nil)
 )
 
 // ContractRef is a reference to the contract's backing object
@@ -31,13 +41,13 @@ type ContractRef interface {
 // AccountRef implements ContractRef.
 //
 // Account references are used during EVM initialisation and
-// it's primary use is to fetch addresses. Removing this object
+// its primary use is to fetch addresses. Removing this object
 // proves difficult because of the cached jump destinations which
 // are fetched from the parent contract (i.e. the caller), which
 // is a ContractRef.
 type AccountRef common.Address
 
-// Address casts AccountRef to a Address
+// Address casts AccountRef to an Address
 func (ar AccountRef) Address() common.Address { return (common.Address)(ar) }
 
 // Contract represents an ethereum contract in the state database. It contains
@@ -58,28 +68,12 @@ type Contract struct {
 	CodeAddr *common.Address
 	Input    []byte
 
+	// is the execution frame represented by this object a contract deployment
+	IsDeployment bool
+	IsSystemCall bool
+
 	Gas   uint64
-	value *big.Int
-}
-
-// NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
-	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object}
-
-	if parent, ok := caller.(*Contract); ok {
-		// Reuse JUMPDEST analysis from parent context if available.
-		c.jumpdests = parent.jumpdests
-	} else {
-		c.jumpdests = make(map[common.Hash]bitvec)
-	}
-
-	// Gas should be a pointer so it can safely be reduced through the run
-	// This pointer will be off the state transition
-	c.Gas = gas
-	// ensures a value is set
-	c.value = value
-
-	return c
+	value *uint256.Int
 }
 
 func (c *Contract) validJumpdest(dest *uint256.Int) bool {
@@ -110,10 +104,17 @@ func (c *Contract) isCode(udest uint64) bool {
 		// Does parent context have the analysis?
 		analysis, exist := c.jumpdests[c.CodeHash]
 		if !exist {
-			// Do the analysis and save in parent context
-			// We do not need to store it in c.analysis
-			analysis = codeBitmap(c.Code)
-			c.jumpdests[c.CodeHash] = analysis
+			if cached, ok := codeBitmapCache.Get(c.CodeHash); ok {
+				contractCodeBitmapHitMeter.Mark(1)
+				analysis = cached.(bitvec)
+			} else {
+				// Do the analysis and save in parent context
+				// We do not need to store it in c.analysis
+				analysis = codeBitmap(c.Code)
+				c.jumpdests[c.CodeHash] = analysis
+				contractCodeBitmapMissMeter.Mark(1)
+				codeBitmapCache.Add(c.CodeHash, analysis)
+			}
 		}
 		// Also stash it in current contract for faster access
 		c.analysis = analysis
@@ -143,16 +144,11 @@ func (c *Contract) AsDelegate() *Contract {
 
 // GetOp returns the n'th element in the contract's byte array
 func (c *Contract) GetOp(n uint64) OpCode {
-	return OpCode(c.GetByte(n))
-}
-
-// GetByte returns the n'th byte in the contract's byte array
-func (c *Contract) GetByte(n uint64) byte {
 	if n < uint64(len(c.Code)) {
-		return c.Code[n]
+		return OpCode(c.Code[n])
 	}
 
-	return 0
+	return STOP
 }
 
 // Caller returns the caller of the contract.
@@ -164,12 +160,26 @@ func (c *Contract) Caller() common.Address {
 }
 
 // UseGas attempts the use gas and subtracts it and returns true on success
-func (c *Contract) UseGas(gas uint64) (ok bool) {
+func (c *Contract) UseGas(gas uint64, logger *tracing.Hooks, reason tracing.GasChangeReason) (ok bool) {
 	if c.Gas < gas {
 		return false
 	}
+	if logger != nil && logger.OnGasChange != nil && reason != tracing.GasChangeIgnored {
+		logger.OnGasChange(c.Gas, c.Gas-gas, reason)
+	}
 	c.Gas -= gas
 	return true
+}
+
+// RefundGas refunds gas to the contract
+func (c *Contract) RefundGas(gas uint64, logger *tracing.Hooks, reason tracing.GasChangeReason) {
+	if gas == 0 {
+		return
+	}
+	if logger != nil && logger.OnGasChange != nil && reason != tracing.GasChangeIgnored {
+		logger.OnGasChange(c.Gas, c.Gas+gas, reason)
+	}
+	c.Gas += gas
 }
 
 // Address returns the contracts address
@@ -178,7 +188,7 @@ func (c *Contract) Address() common.Address {
 }
 
 // Value returns the contract's value (sent to it from it's caller)
-func (c *Contract) Value() *big.Int {
+func (c *Contract) Value() *uint256.Int {
 	return c.value
 }
 

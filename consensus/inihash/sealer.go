@@ -378,11 +378,7 @@ func (s *remoteSealer) notifyWork() {
 	// Encode the JSON payload of the notification. When NotifyFull is set,
 	// this is the complete block header, otherwise it is a JSON array.
 	var blob []byte
-	if s.inihash.config.NotifyFull {
-		blob, _ = json.Marshal(s.currentBlock.Header())
-	} else {
-		blob, _ = json.Marshal(work)
-	}
+	blob, _ = json.Marshal(work)
 
 	s.reqWG.Add(len(s.notifyURLs))
 	for _, url := range s.notifyURLs {
@@ -433,7 +429,8 @@ func (s *remoteSealer) submitWork(nonce types.BlockNonce, extraNonce types.Block
 
 	start := time.Now()
 	if !s.noverify {
-		if err := s.inihash.verifySeal(nil, header, true); err != nil {
+		bigUtil := big.NewInt(1)
+		if err := s.inihash.verifySeal(nil, header, true, bigUtil); err != nil {
 			s.inihash.config.Log.Warn("Invalid proof-of-work submitted", "sealhash", sealhash, "elapsed", common.PrettyDuration(time.Since(start)), "err", err)
 			return false
 		}

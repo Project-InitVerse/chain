@@ -1,4 +1,4 @@
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2021 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -18,28 +18,25 @@
 package ethconfig
 
 import (
-	"github.com/Project-InitVerse/chain/consensus/dpos"
+	"fmt"
 	"github.com/Project-InitVerse/chain/consensus/inihash"
-	"math/big"
-	"os"
-	"os/user"
-	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/beacon"
 	"github.com/Project-InitVerse/chain/consensus/clique"
 	"github.com/Project-InitVerse/chain/consensus/ethash"
 	"github.com/Project-InitVerse/chain/consensus/parlia"
 	"github.com/Project-InitVerse/chain/core"
-	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/core/txpool/blobpool"
+	"github.com/Project-InitVerse/chain/core/txpool/legacypool"
 	"github.com/Project-InitVerse/chain/eth/gasprice"
 	"github.com/Project-InitVerse/chain/ethdb"
 	"github.com/Project-InitVerse/chain/internal/ethapi"
 	"github.com/Project-InitVerse/chain/log"
-	"github.com/Project-InitVerse/chain/miner"
-	"github.com/Project-InitVerse/chain/node"
+	"github.com/Project-InitVerse/chain/miner/minerconfig"
+	"github.com/Project-InitVerse/chain/p2p/enode"
 	"github.com/Project-InitVerse/chain/params"
 )
 
@@ -49,140 +46,127 @@ var FullNodeGPO = gasprice.Config{
 	Percentile:      60,
 	MaxPrice:        gasprice.DefaultMaxPrice,
 	OracleThreshold: 1000,
+	IgnorePrice:     gasprice.DefaultIgnorePrice,
 }
 
-// LightClientGPO contains default gasprice oracle settings for light client.
-var LightClientGPO = gasprice.Config{
-	Blocks:     2,
-	Percentile: 60,
-	MaxPrice:   gasprice.DefaultMaxPrice,
-}
-
-// Defaults contains default settings for use on the Ethereum main net.
+// Defaults contains default settings for use on the BSC main net.
 var Defaults = Config{
-	SyncMode: downloader.FullSync,
-	Ethash: ethash.Config{
-		CacheDir:         "ethash",
-		CachesInMem:      2,
-		CachesOnDisk:     3,
-		CachesLockMmap:   false,
-		DatasetsInMem:    1,
-		DatasetsOnDisk:   2,
-		DatasetsLockMmap: false,
-	},
-	NetworkId:               1,
-	TxLookupLimit:           2350000,
-	LightPeers:              100,
-	UltraLightFraction:      75,
-	DatabaseCache:           512,
-	TrieCleanCache:          154,
-	TrieCleanCacheJournal:   "triecache",
-	TrieCleanCacheRejournal: 60 * time.Minute,
-	TrieDirtyCache:          256,
-	TrieTimeout:             60 * time.Minute,
-	TriesInMemory:           128,
-	SnapshotCache:           102,
-	Miner: miner.Config{
-		GasFloor:      15000000,
-		GasCeil:       30000000,
-		GasPrice:      big.NewInt(params.GWei),
-		Recommit:      3 * time.Second,
-		DelayLeftOver: 500 * time.Millisecond,
-	},
-	TxPool:      core.DefaultTxPoolConfig,
-	RPCGasCap:   25000000,
-	GPO:         FullNodeGPO,
-	RPCTxFeeCap: 1, // 1 ether
+	SyncMode:           FullSync,
+	NetworkId:          1, // enable auto configuration of networkID == chainID
+	TxLookupLimit:      2350000,
+	TransactionHistory: 2350000,
+	StateHistory:       params.FullImmutabilityThreshold,
+	DatabaseCache:      512,
+	TrieCleanCache:     154,
+	TrieDirtyCache:     256,
+	TrieTimeout:        10 * time.Minute,
+	TriesInMemory:      128,
+	TriesVerifyMode:    core.LocalVerify,
+	SnapshotCache:      102,
+	DiffBlock:          uint64(86400),
+	FilterLogCacheSize: 32,
+	Miner:              minerconfig.DefaultConfig,
+	TxPool:             legacypool.DefaultConfig,
+	BlobPool:           blobpool.DefaultConfig,
+	RPCGasCap:          50000000,
+	RPCEVMTimeout:      5 * time.Second,
+	GPO:                FullNodeGPO,
+	RPCTxFeeCap:        1,                                         // 1 ether
+	BlobExtraReserve:   params.DefaultExtraReserveForBlobRequests, // Extra reserve threshold for blob, blob never expires when -1 is set, default 28800
 }
 
-func init() {
-	home := os.Getenv("HOME")
-	if home == "" {
-		if user, err := user.Current(); err == nil {
-			home = user.HomeDir
-		}
-	}
-	if runtime.GOOS == "darwin" {
-		Defaults.Ethash.DatasetDir = filepath.Join(home, "Library", "Ethash")
-	} else if runtime.GOOS == "windows" {
-		localappdata := os.Getenv("LOCALAPPDATA")
-		if localappdata != "" {
-			Defaults.Ethash.DatasetDir = filepath.Join(localappdata, "Ethash")
-		} else {
-			Defaults.Ethash.DatasetDir = filepath.Join(home, "AppData", "Local", "Ethash")
-		}
-	} else {
-		Defaults.Ethash.DatasetDir = filepath.Join(home, ".ethash")
-	}
-}
+//go:generate go run github.com/fjl/gencodec -type Config -formats toml -out gen_config.go
 
-//go:generate gencodec -type Config -formats toml -out gen_config.go
-
-// Config contains configuration options for of the ETH and LES protocols.
+// Config contains configuration options for ETH and LES protocols.
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
 	// If nil, the Ethereum main net block is used.
 	Genesis *core.Genesis `toml:",omitempty"`
 
-	// Protocol options
-	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
+	// Network ID separates blockchains on the peer-to-peer networking level. When left
+	// zero, the chain ID is used as network ID.
+	NetworkId uint64
+	SyncMode  SyncMode
 
+	// DisablePeerTxBroadcast is an optional config and disabled by default, and usually you do not need it.
+	// When this flag is enabled, you are requesting remote peers to stop broadcasting new transactions to you, and
+	// it does not mean that your node will stop broadcasting transactions to remote peers.
+	// If your node does care about new mempool transactions (e.g., running rpc services without the need of mempool
+	// transactions) or is continuously under high pressure (e.g., mempool is always full), then you can consider
+	// to turn it on.
+	DisablePeerTxBroadcast bool
+	EVNNodeIDsToAdd        []enode.ID
+	EVNNodeIDsToRemove     []enode.ID
 	// This can be set to list of enrtree:// URLs which will be queried for
-	// for nodes to connect to.
-	EthDiscoveryURLs  []string
-	SnapDiscoveryURLs []string
+	// nodes to connect to.
+	EthDiscoveryURLs   []string
+	SnapDiscoveryURLs  []string
+	TrustDiscoveryURLs []string
+	BscDiscoveryURLs   []string
 
-	NoPruning       bool // Whether to disable pruning and flush everything to disk
-	DirectBroadcast bool
-	RangeLimit      bool
+	// State options.
+	NoPruning  bool // Whether to disable pruning and flush everything to disk
+	NoPrefetch bool // Whether to disable prefetching and only load state on demand
 
+	DirectBroadcast     bool
+	DisableSnapProtocol bool // Whether disable snap protocol
+	EnableTrustProtocol bool // Whether enable trust protocol
+	RangeLimit          bool
+
+	// Deprecated: use 'TransactionHistory' instead.
 	TxLookupLimit uint64 `toml:",omitempty"` // The maximum number of blocks from head whose tx indices are reserved.
 
-	// Whitelist of required block number -> hash values to accept
-	Whitelist map[uint64]common.Hash `toml:"-"`
+	TransactionHistory uint64 `toml:",omitempty"` // The maximum number of blocks from head whose tx indices are reserved.
+	StateHistory       uint64 `toml:",omitempty"` // The maximum number of blocks from head whose state histories are reserved.
+	// State scheme represents the scheme used to store ethereum states and trie
+	// nodes on top. It can be 'hash', 'path', or none which means use the scheme
+	// consistent with persistent state.
+	StateScheme        string `toml:",omitempty"` // State scheme used to store ethereum state and merkle trie nodes on top
+	PathSyncFlush      bool   `toml:",omitempty"` // State scheme used to store ethereum state and merkle trie nodes on top
+	JournalFileEnabled bool   // Whether the TrieJournal is stored using journal file
 
-	// Light client options
-	LightServ          int  `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
-	LightIngress       int  `toml:",omitempty"` // Incoming bandwidth limit for light servers
-	LightEgress        int  `toml:",omitempty"` // Outgoing bandwidth limit for light servers
-	LightPeers         int  `toml:",omitempty"` // Maximum number of LES client peers
-	LightNoPrune       bool `toml:",omitempty"` // Whether to disable light chain pruning
-	LightNoSyncServe   bool `toml:",omitempty"` // Whether to serve light clients before syncing
-	SyncFromCheckpoint bool `toml:",omitempty"` // Whether to sync the header chain from the configured checkpoint
+	DisableTxIndexer bool `toml:",omitempty"` // Whether to enable the transaction indexer
 
-	// Ultra Light client options
-	UltraLightServers      []string `toml:",omitempty"` // List of trusted ultra light servers
-	UltraLightFraction     int      `toml:",omitempty"` // Percentage of trusted servers to accept an announcement
-	UltraLightOnlyAnnounce bool     `toml:",omitempty"` // Whether to only announce headers, or also serve them
+	// RequiredBlocks is a set of block number -> hash mappings which must be in the
+	// canonical chain of all remote peers. Setting the option makes geth verify the
+	// presence of these blocks for every new peer connection.
+	RequiredBlocks map[uint64]common.Hash `toml:"-"`
 
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
 	DatabaseCache      int
 	DatabaseFreezer    string
+	DatabaseDiff       string
+	PersistDiff        bool
+	DiffBlock          uint64
+	// PruneAncientData is an optional config and disabled by default, and usually you do not need it.
+	// When this flag is enabled, only keep the latest 9w blocks' data, the older blocks' data will be
+	// pruned instead of being dumped to freezerdb, the pruned data includes CanonicalHash, Header, Block,
+	// Receipt and TotalDifficulty.
+	// Notice: the PruneAncientData once be turned on, the get/chaindata/ancient dir will be removed,
+	// if restart without the pruneancient flag, the ancient data will start with the previous point that
+	// the oldest unpruned block number.
+	PruneAncientData bool
 
-	TrieCleanCache          int
-	TrieCleanCacheJournal   string        `toml:",omitempty"` // Disk journal directory for trie cache to survive node restarts
-	TrieCleanCacheRejournal time.Duration `toml:",omitempty"` // Time interval to regenerate the journal for clean cache
-	TrieDirtyCache          int
-	TrieTimeout             time.Duration
-	SnapshotCache           int
-	TriesInMemory           uint64
-	Preimages               bool
+	TrieCleanCache  int
+	TrieDirtyCache  int
+	TrieTimeout     time.Duration
+	SnapshotCache   int
+	TriesInMemory   uint64
+	TriesVerifyMode core.VerifyMode
+	Preimages       bool
+
+	// This is the number of blocks for which logs will be cached in the filter system.
+	FilterLogCacheSize int
 
 	// Mining options
-	Miner miner.Config
+	Miner minerconfig.Config
 
-	// POR options
-	PorChallengeCommitUrl string
-	Por                   bool
-	// Ethash options
-	Ethash  ethash.Config  `toml:",omitempty"`
 	Inihash inihash.Config `toml:",omitempty"`
-
 	// Transaction pool options
-	TxPool core.TxPoolConfig
+	TxPool   legacypool.Config
+	BlobPool blobpool.Config
 
 	// Gas Price Oracle options
 	GPO gasprice.Config
@@ -190,57 +174,55 @@ type Config struct {
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
 
-	// Miscellaneous options
-	DocRoot string `toml:"-"`
-
-	// Type of the EWASM interpreter ("" for default)
-	EWASMInterpreter string
-
-	// Type of the EVM interpreter ("" for default)
-	EVMInterpreter string
+	// Enables VM tracing
+	VMTrace           string
+	VMTraceJsonConfig string
 
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap uint64
 
+	// RPCEVMTimeout is the global timeout for eth-call.
+	RPCEVMTimeout time.Duration
+
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
-	// send-transction variants. The unit is ether.
+	// send-transaction variants. The unit is ether.
 	RPCTxFeeCap float64
 
-	// Checkpoint is a hardcoded checkpoint which can be nil.
-	Checkpoint *params.TrustedCheckpoint `toml:",omitempty"`
+	// OverridePassedForkTime
+	OverridePassedForkTime *uint64 `toml:",omitempty"`
 
-	// CheckpointOracle is the configuration for checkpoint oracle.
-	CheckpointOracle *params.CheckpointOracleConfig `toml:",omitempty"`
+	// OverrideLorentz (TODO: remove after the fork)
+	OverrideLorentz *uint64 `toml:",omitempty"`
 
-	// Berlin block override (TODO: remove after the fork)
-	OverrideBerlin *big.Int `toml:",omitempty"`
+	// OverrideMaxwell (TODO: remove after the fork)
+	OverrideMaxwell *uint64 `toml:",omitempty"`
+
+	// OverrideFermi (TODO: remove after the fork)
+	OverrideFermi *uint64 `toml:",omitempty"`
+
+	// OverrideVerkle (TODO: remove after the fork)
+	OverrideVerkle *uint64 `toml:",omitempty"`
+
+	// blob setting
+	BlobExtraReserve uint64
 }
 
-// CreateConsensusEngine creates a consensus engine for the given chain configuration.
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, iniConfig *inihash.Config, notify []string, noverify bool, db ethdb.Database, ee *ethapi.PublicBlockChainAPI, genesisHash common.Hash) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
+// CreateConsensusEngine creates a consensus engine for the given chain config.
+// Clique is allowed for now to live standalone, but ethash is forbidden and can
+// only exist on already merged networks.
+func CreateConsensusEngine(config *params.ChainConfig, iniConfig *inihash.Config, notify []string, noverify bool, db ethdb.Database, ee *ethapi.BlockChainAPI, genesisHash common.Hash) (consensus.Engine, error) {
+	if config.Parlia != nil {
+		return parlia.New(config, db, ee, genesisHash), nil
 	}
-	if chainConfig.Parlia != nil {
-		return parlia.New(chainConfig, db, ee, genesisHash)
+	if config.TerminalTotalDifficulty == nil {
+		log.Error("Geth only supports PoS networks. Please transition legacy networks using Geth v1.13.x.")
+		return nil, fmt.Errorf("'terminalTotalDifficulty' is not set in genesis block")
 	}
-	if chainConfig.Dpos != nil {
-		return dpos.New(chainConfig, db, ee, genesisHash)
-	}
-	// Otherwise assume proof-of-work
-	switch config.PowMode {
-	case ethash.ModeFake:
-		log.Warn("Ethash used in fake mode")
-	case ethash.ModeTest:
-		log.Warn("Ethash used in test mode")
-	case ethash.ModeShared:
-		log.Warn("Ethash used in shared mode")
-	}
-	if chainConfig.Inihash != nil {
-		engine := inihash.New(inihash.Config{
+	if config.Inihash != nil {
+		log.Debug("inihash engine start")
+		engine := inihash.New(config, inihash.Config{
 			PowMode:          iniConfig.PowMode,
-			CacheDir:         stack.ResolvePath(iniConfig.CacheDir),
+			CacheDir:         iniConfig.CacheDir,
 			CachesInMem:      iniConfig.CachesInMem,
 			CachesOnDisk:     iniConfig.CachesOnDisk,
 			CachesLockMmap:   iniConfig.CachesLockMmap,
@@ -248,23 +230,25 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 			DatasetsInMem:    iniConfig.DatasetsInMem,
 			DatasetsOnDisk:   iniConfig.DatasetsOnDisk,
 			DatasetsLockMmap: iniConfig.DatasetsLockMmap,
-			NotifyFull:       iniConfig.NotifyFull,
-		}, notify, noverify, chainConfig.ChainID)
+			BlackList:        iniConfig.BlackList,
+			StartBlockHeight: iniConfig.StartBlockHeight,
+			AllowList:        iniConfig.AllowList,
+		}, notify, noverify, config.ChainID)
 		engine.SetThreads(-1) // Disable CPU mining
-		return engine
+		return engine, nil
 	}
-	engine := ethash.New(ethash.Config{
-		PowMode:          config.PowMode,
-		CacheDir:         stack.ResolvePath(config.CacheDir),
-		CachesInMem:      config.CachesInMem,
-		CachesOnDisk:     config.CachesOnDisk,
-		CachesLockMmap:   config.CachesLockMmap,
-		DatasetDir:       config.DatasetDir,
-		DatasetsInMem:    config.DatasetsInMem,
-		DatasetsOnDisk:   config.DatasetsOnDisk,
-		DatasetsLockMmap: config.DatasetsLockMmap,
-		NotifyFull:       config.NotifyFull,
-	}, notify, noverify)
-	engine.SetThreads(-1) // Disable CPU mining
-	return engine
+	// If proof-of-authority is requested, set it up
+	if config.Clique != nil {
+		return clique.New(config.Clique, db), nil
+	}
+	return beacon.New(ethash.NewFaker()), nil
+}
+
+func ApplyDefaultEthConfig(cfg *Config) {
+	if cfg == nil {
+		log.Warn("ApplyDefaultEthConfig cfg == nil")
+		return
+	}
+
+	minerconfig.ApplyDefaultMinerConfig(&cfg.Miner)
 }

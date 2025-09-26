@@ -20,23 +20,38 @@ import (
 	"math/big"
 
 	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/stateless"
+	"github.com/Project-InitVerse/chain/core/tracing"
 	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/trie/utils"
+	"github.com/holiman/uint256"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
+	CreateContract(common.Address)
 
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) uint256.Int
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) uint256.Int
+	SubLockBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) uint256.Int
+	AddLockBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason) uint256.Int
+
+	GetBalance(common.Address) *uint256.Int
+	GetLockBalance(common.Address) *uint256.Int
+	SetBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason)
+	SetLockBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason)
 
 	GetNonce(common.Address) uint64
-	SetNonce(common.Address, uint64)
+	SetNonce(common.Address, uint64, tracing.NonceChangeReason)
 
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte
-	SetCode(common.Address, []byte)
+
+	// SetCode sets the new code for the address, and returns the previous code, if any.
+	SetCode(common.Address, []byte) []byte
 	GetCodeSize(common.Address) int
 
 	AddRefund(uint64)
@@ -45,19 +60,29 @@ type StateDB interface {
 
 	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
-	SetState(common.Address, common.Hash, common.Hash)
+	SetState(common.Address, common.Hash, common.Hash) common.Hash
+	GetStorageRoot(addr common.Address) common.Hash
 
-	Suicide(common.Address) bool
-	HasSuicided(common.Address) bool
+	GetTransientState(addr common.Address, key common.Hash) common.Hash
+	SetTransientState(addr common.Address, key, value common.Hash)
+
+	SelfDestruct(common.Address) uint256.Int
+	HasSelfDestructed(common.Address) bool
+
+	// SelfDestruct6780 is post-EIP6780 selfdestruct, which means that it's a
+	// send-all-to-beneficiary, unless the contract was created in this same
+	// transaction, in which case it will be destructed.
+	// This method returns the prior balance, along with a boolean which is
+	// true iff the object was indeed destructed.
+	SelfDestruct6780(common.Address) (uint256.Int, bool)
 
 	// Exist reports whether the given account exists in state.
-	// Notably this should also return true for suicided accounts.
+	// Notably this should also return true for self-destructed accounts.
 	Exist(common.Address) bool
 	// Empty returns whether the given account is empty. Empty
 	// is defined according to EIP161 (balance = nonce = code = 0).
 	Empty(common.Address) bool
 
-	PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList)
 	AddressInAccessList(addr common.Address) bool
 	SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool)
 	// AddAddressToAccessList adds the given address to the access list. This operation is safe to perform
@@ -66,25 +91,40 @@ type StateDB interface {
 	// AddSlotToAccessList adds the given (address,slot) to the access list. This operation is safe to perform
 	// even if the feature/fork is not active yet
 	AddSlotToAccessList(addr common.Address, slot common.Hash)
+	ClearAccessList()
+
+	// PointCache returns the point cache used in computations
+	PointCache() *utils.PointCache
+
+	Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList)
+	SetTxContext(thash common.Hash, ti int)
+	TxIndex() int
 
 	RevertToSnapshot(int)
 	Snapshot() int
 
 	AddLog(*types.Log)
+	GetLogs(hash common.Hash, blockNumber uint64, blockHash common.Hash) []*types.Log
 	AddPreimage(common.Hash, []byte)
 
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+	Witness() *stateless.Witness
+
+	AccessEvents() *state.AccessEvents
+
+	// Finalise must be invoked at the end of a transaction
+	Finalise(bool)
+	IntermediateRoot(deleteEmptyObjects bool) common.Hash
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM
 // depends on this context being implemented for doing subcalls and initialising new EVM contracts.
 type CallContext interface {
-	// Call another contract
+	// Call calls another contract.
 	Call(env *EVM, me ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error)
-	// Take another's contract code and execute within our own context
+	// CallCode takes another contracts code and execute within our own context
 	CallCode(env *EVM, me ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error)
-	// Same as CallCode except sender and value is propagated from parent to child scope
+	// DelegateCall is same as CallCode except sender and value is propagated from parent to child scope
 	DelegateCall(env *EVM, me ContractRef, addr common.Address, data []byte, gas *big.Int) ([]byte, error)
-	// Create a new contract
+	// Create creates a new contract
 	Create(env *EVM, me ContractRef, data []byte, gas, value *big.Int) ([]byte, common.Address, error)
 }

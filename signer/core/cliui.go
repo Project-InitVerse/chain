@@ -42,7 +42,6 @@ func NewCommandlineUI() *CommandlineUI {
 }
 
 func (ui *CommandlineUI) RegisterUIServer(api *UIServerAPI) {
-	// noop
 	ui.api = api
 }
 
@@ -62,7 +61,6 @@ func (ui *CommandlineUI) readString() string {
 }
 
 func (ui *CommandlineUI) OnInputRequired(info UserInputRequest) (UserInputResponse, error) {
-
 	fmt.Printf("## %s\n\n%s\n", info.Title, info.Prompt)
 	defer fmt.Println("-----------------------")
 	if info.IsPassword {
@@ -116,21 +114,32 @@ func (ui *CommandlineUI) ApproveTx(request *SignTxRequest) (SignTxResponse, erro
 	} else {
 		fmt.Printf("to:    <contact creation>\n")
 	}
-	fmt.Printf("from:     %v\n", request.Transaction.From.String())
-	fmt.Printf("value:    %v wei\n", weival)
-	fmt.Printf("gas:      %v (%v)\n", request.Transaction.Gas, uint64(request.Transaction.Gas))
-	fmt.Printf("gasprice: %v wei\n", request.Transaction.GasPrice.ToInt())
+	fmt.Printf("from:               %v\n", request.Transaction.From.String())
+	fmt.Printf("value:              %v wei\n", weival)
+	fmt.Printf("gas:                %v (%v)\n", request.Transaction.Gas, uint64(request.Transaction.Gas))
+	if request.Transaction.MaxFeePerGas != nil {
+		fmt.Printf("maxFeePerGas:          %v wei\n", request.Transaction.MaxFeePerGas.ToInt())
+		fmt.Printf("maxPriorityFeePerGas:  %v wei\n", request.Transaction.MaxPriorityFeePerGas.ToInt())
+	} else {
+		fmt.Printf("gasprice: %v wei\n", request.Transaction.GasPrice.ToInt())
+	}
 	fmt.Printf("nonce:    %v (%v)\n", request.Transaction.Nonce, uint64(request.Transaction.Nonce))
 	if chainId := request.Transaction.ChainID; chainId != nil {
 		fmt.Printf("chainid:  %v\n", chainId)
 	}
 	if list := request.Transaction.AccessList; list != nil {
-		fmt.Printf("Accesslist\n")
+		fmt.Printf("Accesslist:\n")
 		for i, el := range *list {
 			fmt.Printf(" %d. %v\n", i, el.Address)
 			for j, slot := range el.StorageKeys {
 				fmt.Printf("   %d. %v\n", j, slot)
 			}
+		}
+	}
+	if len(request.Transaction.BlobHashes) > 0 {
+		fmt.Printf("Blob hashes:\n")
+		for _, bh := range request.Transaction.BlobHashes {
+			fmt.Printf("   %v\n", bh)
 		}
 	}
 	if request.Transaction.Data != nil {
@@ -145,7 +154,6 @@ func (ui *CommandlineUI) ApproveTx(request *SignTxRequest) (SignTxResponse, erro
 			fmt.Printf("  * %s : %s\n", m.Typ, m.Message)
 		}
 		fmt.Println()
-
 	}
 	fmt.Printf("\n")
 	showMetadata(request.Meta)
@@ -207,7 +215,6 @@ func (ui *CommandlineUI) ApproveListing(request *ListRequest) (ListResponse, err
 
 // ApproveNewAccount prompt the user for confirmation to create new Account, and reveal to caller
 func (ui *CommandlineUI) ApproveNewAccount(request *NewAccountRequest) (NewAccountResponse, error) {
-
 	ui.mu.Lock()
 	defer ui.mu.Unlock()
 
@@ -252,17 +259,21 @@ func (ui *CommandlineUI) showAccounts() {
 		fmt.Print("No accounts found\n")
 		return
 	}
+	var msg string
 	var out = new(strings.Builder)
+	if limit := 20; len(accounts) > limit {
+		msg = fmt.Sprintf("\nFirst %d accounts listed (%d more available).\n", limit, len(accounts)-limit)
+		accounts = accounts[:limit]
+	}
 	fmt.Fprint(out, "\n------- Available accounts -------\n")
 	for i, account := range accounts {
 		fmt.Fprintf(out, "%d. %s at %s\n", i, account.Address, account.URL)
 	}
-	fmt.Print(out.String())
+	fmt.Print(out.String(), msg)
 }
 
 func (ui *CommandlineUI) OnSignerStartup(info StartupInfo) {
-
-	fmt.Printf("\n------- Signer info -------\n")
+	fmt.Print("\n------- Signer info -------\n")
 	for k, v := range info.Info {
 		fmt.Printf("* %v : %v\n", k, v)
 	}

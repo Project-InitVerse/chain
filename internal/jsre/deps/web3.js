@@ -518,7 +518,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeAddress is a prootype that represents address type
+ * SolidityTypeAddress is a prototype that represents address type
  * It matches:
  * address
  * address[]
@@ -546,7 +546,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeBool is a prootype that represents bool type
+ * SolidityTypeBool is a prototype that represents bool type
  * It matches:
  * bool
  * bool[]
@@ -1033,7 +1033,7 @@ var formatOutputInt = function (param) {
  *
  * @method formatOutputUInt
  * @param {SolidityParam}
- * @returns {BigNumeber} right-aligned output bytes formatted to uint
+ * @returns {BigNumber} right-aligned output bytes formatted to uint
  */
 var formatOutputUInt = function (param) {
     var value = param.staticPart() || "0";
@@ -1146,7 +1146,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeInt is a prootype that represents int type
+ * SolidityTypeInt is a prototype that represents int type
  * It matches:
  * int
  * int[]
@@ -1334,7 +1334,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeReal is a prootype that represents real type
+ * SolidityTypeReal is a prototype that represents real type
  * It matches:
  * real
  * real[]
@@ -1647,7 +1647,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeUInt is a prootype that represents uint type
+ * SolidityTypeUInt is a prototype that represents uint type
  * It matches:
  * uint
  * uint[]
@@ -1681,7 +1681,7 @@ var f = require('./formatters');
 var SolidityType = require('./type');
 
 /**
- * SolidityTypeUReal is a prootype that represents ureal type
+ * SolidityTypeUReal is a prototype that represents ureal type
  * It matches:
  * ureal
  * ureal[]
@@ -2031,7 +2031,7 @@ var fromAscii = function(str) {
  *
  * @method transformToFullName
  * @param {Object} json-abi
- * @return {String} full fnction/event name
+ * @return {String} full function/event name
  */
 var transformToFullName = function (json) {
     if (json.name.indexOf('(') !== -1) {
@@ -2307,7 +2307,7 @@ var toChecksumAddress = function (address) {
 };
 
 /**
- * Transforms given string to valid 20 bytes-length addres with 0x prefix
+ * Transforms given string to valid 20 bytes-length address with 0x prefix
  *
  * @method toAddress
  * @param {String} address
@@ -2361,7 +2361,7 @@ var isFunction = function (object) {
 };
 
 /**
- * Returns true if object is Objet, otherwise false
+ * Returns true if object is Object, otherwise false
  *
  * @method isObject
  * @param {Object}
@@ -2757,7 +2757,7 @@ var Batch = function (web3) {
  * Should be called to add create new request to batch request
  *
  * @method add
- * @param {Object} jsonrpc requet object
+ * @param {Object} jsonrpc request object
  */
 Batch.prototype.add = function (request) {
     this.requests.push(request);
@@ -3696,7 +3696,7 @@ var outputBigNumberFormatter = function (number) {
 };
 
 var isPredefinedBlockNumber = function (blockNumber) {
-    return blockNumber === 'latest' || blockNumber === 'pending' || blockNumber === 'earliest';
+    return blockNumber === 'latest' || blockNumber === 'pending' || blockNumber === 'earliest' || blockNumber === 'finalized' || blockNumber === 'safe';
 };
 
 var inputDefaultBlockNumberFormatter = function (blockNumber) {
@@ -3734,7 +3734,7 @@ var inputCallFormatter = function (options){
         options.to = inputAddressFormatter(options.to);
     }
 
-    ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+    ['maxFeePerBlobGas', 'maxFeePerGas', 'maxPriorityFeePerGas', 'gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
         return options[key] !== undefined;
     }).forEach(function(key){
         options[key] = utils.fromDecimal(options[key]);
@@ -3759,7 +3759,7 @@ var inputTransactionFormatter = function (options){
         options.to = inputAddressFormatter(options.to);
     }
 
-    ['gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
+    ['maxFeePerBlobGas', 'maxFeePerGas', 'maxPriorityFeePerGas', 'gasPrice', 'gas', 'value', 'nonce'].filter(function (key) {
         return options[key] !== undefined;
     }).forEach(function(key){
         options[key] = utils.fromDecimal(options[key]);
@@ -3783,6 +3783,15 @@ var outputTransactionFormatter = function (tx){
     tx.nonce = utils.toDecimal(tx.nonce);
     tx.gas = utils.toDecimal(tx.gas);
     tx.gasPrice = utils.toBigNumber(tx.gasPrice);
+    if(tx.maxFeePerGas !== undefined) {
+      tx.maxFeePerGas = utils.toBigNumber(tx.maxFeePerGas);
+    }
+    if(tx.maxPriorityFeePerGas !== undefined) {
+      tx.maxPriorityFeePerGas = utils.toBigNumber(tx.maxPriorityFeePerGas);
+    }
+    if(tx.maxFeePerBlobGas !== undefined) {
+      tx.maxFeePerBlobGas = utils.toBigNumber(tx.maxFeePerBlobGas);
+    }
     tx.value = utils.toBigNumber(tx.value);
     return tx;
 };
@@ -3801,7 +3810,15 @@ var outputTransactionReceiptFormatter = function (receipt){
         receipt.transactionIndex = utils.toDecimal(receipt.transactionIndex);
     receipt.cumulativeGasUsed = utils.toDecimal(receipt.cumulativeGasUsed);
     receipt.gasUsed = utils.toDecimal(receipt.gasUsed);
-
+    if(receipt.effectiveGasPrice !== undefined) {
+      receipt.effectiveGasPrice = utils.toBigNumber(receipt.effectiveGasPrice);
+    }
+    if(receipt.blobGasPrice !== undefined) {
+      receipt.blobGasPrice = utils.toBigNumber(receipt.blobGasPrice);
+    }
+    if(receipt.blobGasUsed !== undefined) {
+      receipt.blobGasUsed = utils.toBigNumber(receipt.blobGasUsed);
+    }
     if(utils.isArray(receipt.logs)) {
         receipt.logs = receipt.logs.map(function(log){
             return outputLogFormatter(log);
@@ -3852,13 +3869,21 @@ var outputTransactionDataAndReceiptFormatter = function (dataAndReceipt){
  * @returns {Object}
 */
 var outputBlockFormatter = function(block) {
-
     // transform to number
+    if (block.baseFeePerGas !== undefined) {
+      block.baseFeePerGas = utils.toBigNumber(block.baseFeePerGas);
+    }
+    if (block.blobGasUsed !== undefined) {
+      block.blobGasUsed = utils.toBigNumber(block.blobGasUsed);
+    }
+    if (block.excessBlobGas !== undefined) {
+      block.excessBlobGas = utils.toBigNumber(block.excessBlobGas);
+    }
     block.gasLimit = utils.toDecimal(block.gasLimit);
     block.gasUsed = utils.toDecimal(block.gasUsed);
     block.size = utils.toDecimal(block.size);
     block.timestamp = utils.toDecimal(block.timestamp);
-    if(block.number !== null)
+    if (block.number !== null)
         block.number = utils.toDecimal(block.number);
 
     block.difficulty = utils.toBigNumber(block.difficulty);
@@ -3950,74 +3975,9 @@ var outputPostFormatter = function(post){
 
     return post;
 };
-//
-// function base58Decode(string) {
-//   var ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-//   var ALPHABET_MAP = {};
-//   var i = 0;
-//
-//   while (i < ALPHABET.length) {
-//     ALPHABET_MAP[ALPHABET.charAt(i)] = i;
-//     i++;
-//   }
-//   var bytes, c, carry, j;
-//   if (string.length === 0) {
-//     return new (typeof Uint8Array !== "undefined" && Uint8Array !== null ? Uint8Array : Buffer)(0);
-//   }
-//   i = void 0;
-//   j = void 0;
-//   bytes = [0];
-//   i = 0;
-//   while (i < string.length) {
-//     c = string[i];
-//     if (!(c in ALPHABET_MAP)) {
-//       throw "Base58.decode received unacceptable input. Character '" + c + "' is not in the Base58 alphabet.";
-//     }
-//     j = 0;
-//     while (j < bytes.length) {
-//       bytes[j] *= 58;
-//       j++;
-//     }
-//     bytes[0] += ALPHABET_MAP[c];
-//     carry = 0;
-//     j = 0;
-//     while (j < bytes.length) {
-//       bytes[j] += carry;
-//       carry = bytes[j] >> 8;
-//       bytes[j] &= 0xff;
-//       ++j;
-//     }
-//     while (carry) {
-//       bytes.push(carry & 0xff);
-//       carry >>= 8;
-//     }
-//     i++;
-//   }
-//   i = 0;
-//   while (string[i] === "1" && i < string.length - 1) {
-//     bytes.push(0);
-//     i++;
-//   }
-//   return new (typeof Uint8Array !== "undefined" && Uint8Array !== null ? Uint8Array : Buffer)(bytes.reverse());
-// };
-var MAP = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-var to_b58   = function(B,A){var d=[],s="",i,j,c,n;for(i in B){j=0,c=B[i];s+=c||s.length^i?"":1;while(j in d||c){n=d[j];n=n?n*256+c:c;c=n/58|0;d[j]=n%58;j++}}while(j--)s+=A[d[j]];return s};
-var from_b58 = function(S,A){var d=[],b=[],i,j,c,n;for(i in S){j=0,c=A.indexOf(S[i]);if(c<0)return undefined;c||b.length^i?i:b.push(0);while(j in d||c){n=d[j];n=n?n*58+c:c;c=n>>8;d[j]=n%256;j++}}while(j--)b.push(d[j]);
-  //console.log(String.fromCodePoint(...b));
-
-  var res="";
-  for (var index = 0; index < b.length; index++) {
-    res += String.fromCharCode(b[index]);
-  }
-    return res};
 
 var inputAddressFormatter = function (address) {
-    if(/^I4.+$/.test(address)){
-      address= "0x"+from_b58(address.substr(2),MAP)
-    }
-  var iban = new Iban(address);
-
+    var iban = new Iban(address);
     if (iban.isValid() && iban.isDirect()) {
         return '0x' + iban.address();
     } else if (utils.isStrictAddress(address)) {
@@ -4037,10 +3997,20 @@ var outputSyncingFormatter = function(result) {
     result.startingBlock = utils.toDecimal(result.startingBlock);
     result.currentBlock = utils.toDecimal(result.currentBlock);
     result.highestBlock = utils.toDecimal(result.highestBlock);
-    if (result.knownStates) {
-        result.knownStates = utils.toDecimal(result.knownStates);
-        result.pulledStates = utils.toDecimal(result.pulledStates);
-    }
+    result.syncedAccounts = utils.toDecimal(result.syncedAccounts);
+    result.syncedAccountBytes = utils.toDecimal(result.syncedAccountBytes);
+    result.syncedBytecodes = utils.toDecimal(result.syncedBytecodes);
+    result.syncedBytecodeBytes = utils.toDecimal(result.syncedBytecodeBytes);
+    result.syncedStorage = utils.toDecimal(result.syncedStorage);
+    result.syncedStorageBytes = utils.toDecimal(result.syncedStorageBytes);
+    result.healedTrienodes = utils.toDecimal(result.healedTrienodes);
+    result.healedTrienodeBytes = utils.toDecimal(result.healedTrienodeBytes);
+    result.healedBytecodes = utils.toDecimal(result.healedBytecodes);
+    result.healedBytecodeBytes = utils.toDecimal(result.healedBytecodeBytes);
+    result.healingTrienodes = utils.toDecimal(result.healingTrienodes);
+    result.healingBytecode = utils.toDecimal(result.healingBytecode);
+    result.txIndexFinishedBlocks = utils.toDecimal(result.txIndexFinishedBlocks);
+    result.txIndexRemainingBlocks = utils.toDecimal(result.txIndexRemainingBlocks);
 
     return result;
 };
@@ -4638,7 +4608,7 @@ Iban.createIndirect = function (options) {
 };
 
 /**
- * Thos method should be used to check if given string is valid iban object
+ * This method should be used to check if given string is valid iban object
  *
  * @method isValid
  * @param {String} iban string
@@ -5485,6 +5455,13 @@ var methods = function () {
         inputFormatter: [null]
     });
 
+    var sendRawTransactionConditional = new Method({
+        name: 'sendRawTransactionConditional',
+        call: 'eth_sendRawTransactionConditional',
+        params: 2,
+        inputFormatter: [null]
+    });
+
     var sendTransaction = new Method({
         name: 'sendTransaction',
         call: 'eth_sendTransaction',
@@ -5544,11 +5521,12 @@ var methods = function () {
         call: 'eth_submitWork',
         params: 3
     });
-    var getBlockReward = new Method({
-        name: 'getBlockReward',
-        call: 'eth_getBlockReward',
+    var skipCheck = new Method({
+        name: 'skipCheck',
+        call: 'eth_skipCheck',
         params: 1
     });
+
 
     var getWork = new Method({
         name: 'getWork',
@@ -5575,6 +5553,7 @@ var methods = function () {
         call,
         estimateGas,
         sendRawTransaction,
+        sendRawTransactionConditional,
         signTransaction,
         sendTransaction,
         sign,
@@ -5583,7 +5562,7 @@ var methods = function () {
         compileSerpent,
         submitWork,
         getWork,
-        getBlockReward
+      skipCheck
     ];
 };
 
@@ -5611,6 +5590,11 @@ var properties = function () {
         new Property({
             name: 'gasPrice',
             getter: 'eth_gasPrice',
+            outputFormatter: formatters.outputBigNumberFormatter
+        }),
+        new Property({
+            name: 'blobBaseFee',
+            getter: 'eth_blobBaseFee',
             outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
@@ -5991,7 +5975,7 @@ module.exports = Shh;
  * @author Alex Beregszaszi <alex@rtfs.hu>
  * @date 2016
  *
- * Reference: https://github.com/Project-DeCloud/chain/blob/swarm/internal/web3ext/web3ext.go#L33
+ * Reference: https://github.com/Project-InitVerse/chain/blob/swarm/internal/web3ext/web3ext.go#L33
  */
 
 "use strict";
@@ -6817,7 +6801,7 @@ var exchangeAbi = require('../contracts/SmartExchange.json');
  * @method transfer
  * @param {String} from
  * @param {String} to iban
- * @param {Value} value to be tranfered
+ * @param {Value} value to be transferred
  * @param {Function} callback, callback
  */
 var transfer = function (eth, from, to, value, callback) {
@@ -6847,7 +6831,7 @@ var transfer = function (eth, from, to, value, callback) {
  * @method transferToAddress
  * @param {String} from
  * @param {String} to
- * @param {Value} value to be tranfered
+ * @param {Value} value to be transferred
  * @param {Function} callback, callback
  */
 var transferToAddress = function (eth, from, to, value, callback) {
@@ -7201,7 +7185,7 @@ module.exports = transfer;
 	        /**
 	         * Initializes a newly created cipher.
 	         *
-	         * @param {number} xformMode Either the encryption or decryption transormation mode constant.
+	         * @param {number} xformMode Either the encryption or decryption transformation mode constant.
 	         * @param {WordArray} key The key.
 	         * @param {Object} cfg (Optional) The configuration options to use for this operation.
 	         *
@@ -9555,7 +9539,7 @@ module.exports = transfer;
 	            var M_offset_14 = M[offset + 14];
 	            var M_offset_15 = M[offset + 15];
 
-	            // Working varialbes
+	            // Working variables
 	            var a = H[0];
 	            var b = H[1];
 	            var c = H[2];
@@ -13754,4 +13738,4 @@ if (typeof window !== 'undefined' && typeof window.Web3 === 'undefined') {
 module.exports = Web3;
 
 },{"./lib/web3":22}]},{},["web3"])
-//# sourceMappingURL=web3-light.js.map
+

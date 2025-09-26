@@ -18,141 +18,43 @@ package eth
 
 import (
 	"math/big"
-	"math/rand"
-	"sync/atomic"
 	"time"
 
 	"github.com/Project-InitVerse/chain/common"
-	"github.com/Project-InitVerse/chain/common/gopool"
 	"github.com/Project-InitVerse/chain/core/rawdb"
-	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/txpool"
 	"github.com/Project-InitVerse/chain/eth/downloader"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
 	"github.com/Project-InitVerse/chain/eth/protocols/eth"
 	"github.com/Project-InitVerse/chain/log"
-	"github.com/Project-InitVerse/chain/p2p/enode"
 )
 
 const (
 	forceSyncCycle      = 10 * time.Second // Time interval to force syncs, even if few peers are available
 	defaultMinSyncPeers = 5                // Amount of peers desired to start syncing
-
-	// This is the target size for the packs of transactions sent by txsyncLoop64.
-	// A pack can get larger than this if a single transactions exceeds this size.
-	txsyncPackSize = 100 * 1024
 )
-
-type txsync struct {
-	p   *eth.Peer
-	txs []*types.Transaction
-}
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (h *handler) syncTransactions(p *eth.Peer) {
-	// Assemble the set of transaction to broadcast or announce to the remote
-	// peer. Fun fact, this is quite an expensive operation as it needs to sort
-	// the transactions if the sorting is not cached yet. However, with a random
-	// order, insertions could overflow the non-executable queues and get dropped.
-	//
-	// TODO(karalabe): Figure out if we could get away with random order somehow
-	var txs types.Transactions
-	pending, _ := h.txpool.Pending()
-	for _, batch := range pending {
-		txs = append(txs, batch...)
-	}
-	if len(txs) == 0 {
-		return
-	}
-	// The eth/65 protocol introduces proper transaction announcements, so instead
-	// of dripping transactions across multiple peers, just send the entire list as
-	// an announcement and let the remote side decide what they need (likely nothing).
-	if p.Version() >= eth.ETH65 {
-		hashes := make([]common.Hash, len(txs))
-		for i, tx := range txs {
-			hashes[i] = tx.Hash()
+	var hashes []common.Hash
+	for _, batch := range h.txpool.Pending(txpool.PendingFilter{OnlyPlainTxs: true}) {
+		for _, tx := range batch {
+			hashes = append(hashes, tx.Hash)
 		}
-		p.AsyncSendPooledTransactionHashes(hashes)
+	}
+	if len(hashes) == 0 {
 		return
 	}
-	// Out of luck, peer is running legacy protocols, drop the txs over
-	select {
-	case h.txsyncCh <- &txsync{p: p, txs: txs}:
-	case <-h.quitSync:
-	}
+	p.AsyncSendPooledTransactionHashes(hashes)
 }
 
-// txsyncLoop64 takes care of the initial transaction sync for each new
-// connection. When a new peer appears, we relay all currently pending
-// transactions. In order to minimise egress bandwidth usage, we send
-// the transactions in small packs to one peer at a time.
-func (h *handler) txsyncLoop64() {
-	defer h.wg.Done()
-
-	var (
-		pending = make(map[enode.ID]*txsync)
-		sending = false               // whether a send is active
-		pack    = new(txsync)         // the pack that is being sent
-		done    = make(chan error, 1) // result of the send
-	)
-
-	// send starts a sending a pack of transactions from the sync.
-	send := func(s *txsync) {
-		if s.p.Version() >= eth.ETH65 {
-			panic("initial transaction syncer running on eth/65+")
-		}
-		// Fill pack with transactions up to the target size.
-		size := common.StorageSize(0)
-		pack.p = s.p
-		pack.txs = pack.txs[:0]
-		for i := 0; i < len(s.txs) && size < txsyncPackSize; i++ {
-			pack.txs = append(pack.txs, s.txs[i])
-			size += s.txs[i].Size()
-		}
-		// Remove the transactions that will be sent.
-		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
-		if len(s.txs) == 0 {
-			delete(pending, s.p.Peer.ID())
-		}
-		// Send the pack in the background.
-		s.p.Log().Trace("Sending batch of transactions", "count", len(pack.txs), "bytes", size)
-		sending = true
-		gopool.Submit(func() { done <- pack.p.SendTransactions(pack.txs) })
+// syncVotes starts sending all currently pending votes to the given peer.
+func (h *handler) syncVotes(p *bscPeer) {
+	votes := h.votepool.GetVotes()
+	if len(votes) == 0 {
+		return
 	}
-	// pick chooses the next pending sync.
-	pick := func() *txsync {
-		if len(pending) == 0 {
-			return nil
-		}
-		n := rand.Intn(len(pending)) + 1
-		for _, s := range pending {
-			if n--; n == 0 {
-				return s
-			}
-		}
-		return nil
-	}
-
-	for {
-		select {
-		case s := <-h.txsyncCh:
-			pending[s.p.Peer.ID()] = s
-			if !sending {
-				send(s)
-			}
-		case err := <-done:
-			sending = false
-			// Stop tracking peers that cause send failures.
-			if err != nil {
-				pack.p.Log().Debug("Transaction send failed", "err", err)
-				delete(pending, pack.p.Peer.ID())
-			}
-			// Schedule the next send.
-			if s := pick(); s != nil {
-				send(s)
-			}
-		case <-h.quitSync:
-			return
-		}
-	}
+	p.AsyncSendVotes(votes)
 }
 
 // chainSyncer coordinates blockchain sync components.
@@ -160,6 +62,7 @@ type chainSyncer struct {
 	handler     *handler
 	force       *time.Timer
 	forced      bool // true when force timer fired
+	warned      time.Time
 	peerEventCh chan struct{}
 	doneCh      chan error // non-nil when sync is running
 }
@@ -183,7 +86,7 @@ func newChainSyncer(handler *handler) *chainSyncer {
 // handlePeerEvent notifies the syncer about a change in the peer set.
 // This is called for new peers and every time a peer announces a new
 // chain head.
-func (cs *chainSyncer) handlePeerEvent(peer *eth.Peer) bool {
+func (cs *chainSyncer) handlePeerEvent() bool {
 	select {
 	case cs.peerEventCh <- struct{}{}:
 		return true
@@ -238,9 +141,8 @@ func (cs *chainSyncer) loop() {
 // nextSyncOp determines whether sync is required at this time.
 func (cs *chainSyncer) nextSyncOp() *chainSyncOp {
 	if cs.doneCh != nil {
-		return nil // Sync already running.
+		return nil // Sync already running
 	}
-
 	// Ensure we're at minimum peer count.
 	minPeers := defaultMinSyncPeers
 	if cs.forced {
@@ -251,20 +153,50 @@ func (cs *chainSyncer) nextSyncOp() *chainSyncOp {
 	if cs.handler.peers.len() < minPeers {
 		return nil
 	}
-	// We have enough peers, check TD
+	// We have enough peers, pick the one with the highest TD, but avoid going
+	// over the terminal total difficulty. Above that we expect the consensus
+	// clients to direct the chain head to sync to.
 	peer := cs.handler.peers.peerWithHighestTD()
 	if peer == nil {
 		return nil
 	}
 	mode, ourTD := cs.modeAndLocalHead()
-	if mode == downloader.FastSync && atomic.LoadUint32(&cs.handler.snapSync) == 1 {
-		// Fast sync via the snap protocol
-		mode = downloader.SnapSync
-	}
 	op := peerToSyncOp(mode, peer)
 	if op.td.Cmp(ourTD) <= 0 {
-		return nil // We're in sync.
+		if !cs.handler.acceptTxs.Load() {
+			// Occurs only during a quick restart.
+			cs.handler.acceptTxs.Store(true)
+			log.Info("Enable transaction acceptance for already in sync.")
+		}
+		// We seem to be in sync according to the legacy rules. In the merge
+		// world, it can also mean we're stuck on the merge block, waiting for
+		// a beacon client. In the latter case, notify the user.
+		if ttd := cs.handler.chain.Config().TerminalTotalDifficulty; ttd != nil && ourTD.Cmp(ttd) >= 0 && time.Since(cs.warned) > 10*time.Second {
+			log.Warn("Local chain is post-merge, waiting for beacon client sync switch-over...")
+			cs.warned = time.Now()
+		}
+		return nil // We're in sync
+		// } else if op.td.Cmp(new(big.Int).Add(ourTD, new(big.Int).SetUint64(10*2))) > 0 {
+		// 	if cs.handler.acceptTxs.Load() && rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(10) < 1 {
+		// 		// There is only a 1/10 probability of disabling transaction acceptance.
+		// 		// This randomness helps protect against attacks where a malicious node falsely claims to have higher blocks.
+		// 		cs.handler.acceptTxs.Store(false)
+		// 		log.Info("Disable transaction acceptance randomly for the delay exceeding 10 blocks.")
+		// 	}
+	} else if op.td.Cmp(new(big.Int).Add(ourTD, common.Big2)) <= 0 { // common.Big2: difficulty of an in-turn block
+		// On BSC, blocks are produced much faster than on Ethereum.
+		// If the node is only slightly behind (e.g., 1 block), syncing is unnecessary.
+		// It's likely still processing broadcasted blocks or block hash announcements.
+		// In most cases, the node will catch up within 3 seconds.
+		time.Sleep(3 * time.Second)
+
+		// Re-check local head to see if it has caught up
+		if _, latestTD := cs.modeAndLocalHead(); ourTD.Cmp(latestTD) < 0 {
+			log.Trace("The local head is already caught up; synchronization is not required.")
+			return nil
+		}
 	}
+
 	return op
 }
 
@@ -274,25 +206,37 @@ func peerToSyncOp(mode downloader.SyncMode, p *eth.Peer) *chainSyncOp {
 }
 
 func (cs *chainSyncer) modeAndLocalHead() (downloader.SyncMode, *big.Int) {
-	// If we're in fast sync mode, return that directly
-	if atomic.LoadUint32(&cs.handler.fastSync) == 1 {
-		block := cs.handler.chain.CurrentFastBlock()
-		td := cs.handler.chain.GetTdByHash(block.Hash())
-		return downloader.FastSync, td
+	// If we're in snap sync mode, return that directly
+	if cs.handler.snapSync.Load() {
+		block := cs.handler.chain.CurrentSnapBlock()
+		td := cs.handler.chain.GetTd(block.Hash(), block.Number.Uint64())
+		return ethconfig.SnapSync, td
 	}
 	// We are probably in full sync, but we might have rewound to before the
-	// fast sync pivot, check if we should reenable
+	// snap sync pivot, check if we should re-enable snap sync.
+	head := cs.handler.chain.CurrentBlock()
 	if pivot := rawdb.ReadLastPivotNumber(cs.handler.database); pivot != nil {
-		if head := cs.handler.chain.CurrentBlock(); head.NumberU64() < *pivot {
-			block := cs.handler.chain.CurrentFastBlock()
-			td := cs.handler.chain.GetTdByHash(block.Hash())
-			return downloader.FastSync, td
+		if head.Number.Uint64() < *pivot {
+			if rawdb.ReadAncientType(cs.handler.database) == rawdb.PruneFreezerType {
+				log.Crit("Current rewound to before the fast sync pivot, can't enable pruneancient mode", "current block number", head.Number.Uint64(), "pivot", *pivot)
+			}
+			block := cs.handler.chain.CurrentSnapBlock()
+			td := cs.handler.chain.GetTd(block.Hash(), block.Number.Uint64())
+			return ethconfig.SnapSync, td
 		}
 	}
+	// We are in a full sync, but the associated head state is missing. To complete
+	// the head state, forcefully rerun the snap sync. Note it doesn't mean the
+	// persistent state is corrupted, just mismatch with the head block.
+	if !cs.handler.chain.NoTries() && !cs.handler.chain.HasState(head.Root) {
+		block := cs.handler.chain.CurrentSnapBlock()
+		td := cs.handler.chain.GetTd(block.Hash(), block.Number.Uint64())
+		log.Info("Reenabled snap sync as chain is stateless")
+		return ethconfig.SnapSync, td
+	}
 	// Nope, we're really full syncing
-	head := cs.handler.chain.CurrentBlock()
-	td := cs.handler.chain.GetTd(head.Hash(), head.NumberU64())
-	return downloader.FullSync, td
+	td := cs.handler.chain.GetTd(head.Hash(), head.Number.Uint64())
+	return ethconfig.FullSync, td
 }
 
 // startSync launches doSync in a new goroutine.
@@ -303,55 +247,24 @@ func (cs *chainSyncer) startSync(op *chainSyncOp) {
 
 // doSync synchronizes the local blockchain with a remote peer.
 func (h *handler) doSync(op *chainSyncOp) error {
-	if op.mode == downloader.FastSync || op.mode == downloader.SnapSync {
-		// Before launch the fast sync, we have to ensure user uses the same
-		// txlookup limit.
-		// The main concern here is: during the fast sync Geth won't index the
-		// block(generate tx indices) before the HEAD-limit. But if user changes
-		// the limit in the next fast sync(e.g. user kill Geth manually and
-		// restart) then it will be hard for Geth to figure out the oldest block
-		// has been indexed. So here for the user-experience wise, it's non-optimal
-		// that user can't change limit during the fast sync. If changed, Geth
-		// will just blindly use the original one.
-		limit := h.chain.TxLookupLimit()
-		if stored := rawdb.ReadFastTxLookupLimit(h.database); stored == nil {
-			rawdb.WriteFastTxLookupLimit(h.database, limit)
-		} else if *stored != limit {
-			h.chain.SetTxLookupLimit(*stored)
-			log.Warn("Update txLookup limit", "provided", limit, "updated", *stored)
-		}
-	}
-	// Run the sync cycle, and disable fast sync if we're past the pivot block
-	err := h.downloader.Synchronise(op.peer.ID(), op.head, op.td, op.mode)
+	// Run the sync cycle, and disable snap sync if we're past the pivot block
+	err := h.downloader.LegacySync(op.peer.ID(), op.head, op.peer.Name(), op.td, h.chain.Config().TerminalTotalDifficulty, op.mode)
 	if err != nil {
 		return err
 	}
-	if atomic.LoadUint32(&h.fastSync) == 1 {
-		log.Info("Fast sync complete, auto disabling")
-		atomic.StoreUint32(&h.fastSync, 0)
-	}
-	if atomic.LoadUint32(&h.snapSync) == 1 {
-		log.Info("Snap sync complete, auto disabling")
-		atomic.StoreUint32(&h.snapSync, 0)
-	}
-	// If we've successfully finished a sync cycle and passed any required checkpoint,
-	// enable accepting transactions from the network.
+	h.enableSyncedFeatures()
+
 	head := h.chain.CurrentBlock()
-	if head.NumberU64() >= h.checkpointNumber {
-		// Checkpoint passed, sanity check the timestamp to have a fallback mechanism
-		// for non-checkpointed (number = 0) private networks.
-		if head.Time() >= uint64(time.Now().AddDate(0, -1, 0).Unix()) {
-			atomic.StoreUint32(&h.acceptTxs, 1)
-		}
-	}
-	if head.NumberU64() > 0 {
+	if head.Number.Uint64() > 0 {
 		// We've completed a sync cycle, notify all peers of new state. This path is
 		// essential in star-topology networks where a gateway node needs to notify
 		// all its out-of-date peers of the availability of a new block. This failure
 		// scenario will most often crop up in private and hackathon networks with
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
-		h.BroadcastBlock(head, false)
+		if block := h.chain.GetBlock(head.Hash(), head.Number.Uint64()); block != nil {
+			h.BroadcastBlock(block, false)
+		}
 	}
 	return nil
 }

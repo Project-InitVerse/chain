@@ -75,6 +75,7 @@ func ParseV4(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid public key (%v)", err)
 		}
+		fmt.Println("ParseV4  1")
 		return NewV4(id, nil, 0, 0), nil
 	}
 	return parseComplete(rawurl)
@@ -126,7 +127,8 @@ func parseComplete(rawurl string) (*Node, error) {
 	if id, err = parsePubkey(u.User.String()); err != nil {
 		return nil, fmt.Errorf("invalid public key (%v)", err)
 	}
-	// Parse the IP address.
+
+	// Parse the IP and ports.
 	ip := net.ParseIP(u.Hostname())
 	if ip == nil {
 		ips, err := lookupIPFunc(u.Hostname())
@@ -135,11 +137,6 @@ func parseComplete(rawurl string) (*Node, error) {
 		}
 		ip = ips[0]
 	}
-	// Ensure the IP is 4 bytes long for IPv4 addresses.
-	if ipv4 := ip.To4(); ipv4 != nil {
-		ip = ipv4
-	}
-	// Parse the port numbers.
 	if tcpPort, err = strconv.ParseUint(u.Port(), 10, 16); err != nil {
 		return nil, errors.New("invalid port")
 	}
@@ -151,7 +148,13 @@ func parseComplete(rawurl string) (*Node, error) {
 			return nil, errors.New("invalid discport in query")
 		}
 	}
-	return NewV4(id, ip, int(tcpPort), int(udpPort)), nil
+
+	// Create the node.
+	node := NewV4(id, ip, int(tcpPort), int(udpPort))
+	if ip == nil && u.Hostname() != "" {
+		node = node.WithHostname(u.Hostname())
+	}
+	return node, nil
 }
 
 // parsePubkey parses a hex-encoded secp256k1 public key.
@@ -181,15 +184,23 @@ func (n *Node) URLv4() string {
 		nodeid = fmt.Sprintf("%s.%x", scheme, n.id[:])
 	}
 	u := url.URL{Scheme: "enode"}
-	if n.Incomplete() {
-		u.Host = nodeid
-	} else {
+	if n.Hostname() != "" {
+		// For nodes with a DNS name: include DNS name, TCP port, and optional UDP port
+		u.User = url.User(nodeid)
+		u.Host = fmt.Sprintf("%s:%d", n.Hostname(), n.TCP())
+		if n.UDP() != n.TCP() {
+			u.RawQuery = "discport=" + strconv.Itoa(n.UDP())
+		}
+	} else if n.ip.IsValid() {
+		// For IP-based nodes: include IP address, TCP port, and optional UDP port
 		addr := net.TCPAddr{IP: n.IP(), Port: n.TCP()}
 		u.User = url.User(nodeid)
 		u.Host = addr.String()
 		if n.UDP() != n.TCP() {
 			u.RawQuery = "discport=" + strconv.Itoa(n.UDP())
 		}
+	} else {
+		u.Host = nodeid
 	}
 	return u.String()
 }

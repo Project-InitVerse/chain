@@ -17,23 +17,30 @@
 package runtime
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Project-InitVerse/chain/accounts/abi"
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
 	"github.com/Project-InitVerse/chain/core"
 	"github.com/Project-InitVerse/chain/core/asm"
-	"github.com/Project-InitVerse/chain/core/rawdb"
 	"github.com/Project-InitVerse/chain/core/state"
+	"github.com/Project-InitVerse/chain/core/tracing"
 	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/core/vm/program"
+	"github.com/Project-InitVerse/chain/eth/tracers"
+	"github.com/Project-InitVerse/chain/eth/tracers/logger"
 	"github.com/Project-InitVerse/chain/params"
+
+	// force-load js tracers to trigger registration
+	_ "github.com/Project-InitVerse/chain/eth/tracers/js"
 )
 
 func TestDefaults(t *testing.T) {
@@ -44,9 +51,6 @@ func TestDefaults(t *testing.T) {
 		t.Error("expected difficulty to be non nil")
 	}
 
-	if cfg.Time == nil {
-		t.Error("expected time to be non nil")
-	}
 	if cfg.GasLimit == 0 {
 		t.Error("didn't expect gaslimit to be zero")
 	}
@@ -102,8 +106,8 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	state, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-	address := common.HexToAddress("0x0a")
+	state, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+	address := common.HexToAddress("0xaa")
 	state.SetCode(address, []byte{
 		byte(vm.PUSH1), 10,
 		byte(vm.PUSH1), 0,
@@ -158,7 +162,7 @@ func BenchmarkCall(b *testing.B) {
 }
 func benchmarkEVM_Create(bench *testing.B, code string) {
 	var (
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+		statedb, _ = state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
 		sender     = common.BytesToAddress([]byte("sender"))
 		receiver   = common.BytesToAddress([]byte("receiver"))
 	)
@@ -170,7 +174,7 @@ func benchmarkEVM_Create(bench *testing.B, code string) {
 		State:       statedb,
 		GasLimit:    10000000,
 		Difficulty:  big.NewInt(0x200000),
-		Time:        new(big.Int).SetUint64(0),
+		Time:        0,
 		Coinbase:    common.Address{},
 		BlockNumber: new(big.Int).SetUint64(1),
 		ChainConfig: &params.ChainConfig{
@@ -211,6 +215,70 @@ func BenchmarkEVM_CREATE2_1200(bench *testing.B) {
 	benchmarkEVM_Create(bench, "5b5862124f80600080f5600152600056")
 }
 
+func BenchmarkEVM_SWAP1(b *testing.B) {
+	// returns a contract that does n swaps (SWAP1)
+	swapContract := func(n uint64) []byte {
+		contract := []byte{
+			byte(vm.PUSH0), // PUSH0
+			byte(vm.PUSH0), // PUSH0
+		}
+		for i := uint64(0); i < n; i++ {
+			contract = append(contract, byte(vm.SWAP1))
+		}
+		return contract
+	}
+
+	state, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+	contractAddr := common.BytesToAddress([]byte("contract"))
+
+	b.Run("10k", func(b *testing.B) {
+		contractCode := swapContract(10_000)
+		state.SetCode(contractAddr, contractCode)
+
+		for i := 0; i < b.N; i++ {
+			_, _, err := Call(contractAddr, []byte{}, &Config{State: state})
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkEVM_RETURN(b *testing.B) {
+	// returns a contract that returns a zero-byte slice of len size
+	returnContract := func(size uint64) []byte {
+		contract := []byte{
+			byte(vm.PUSH8), 0, 0, 0, 0, 0, 0, 0, 0, // PUSH8 0xXXXXXXXXXXXXXXXX
+			byte(vm.PUSH0),  // PUSH0
+			byte(vm.RETURN), // RETURN
+		}
+		binary.BigEndian.PutUint64(contract[1:], size)
+		return contract
+	}
+
+	state, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+	contractAddr := common.BytesToAddress([]byte("contract"))
+
+	for _, n := range []uint64{1_000, 10_000, 100_000, 1_000_000} {
+		b.Run(strconv.FormatUint(n, 10), func(b *testing.B) {
+			b.ReportAllocs()
+
+			contractCode := returnContract(n)
+			state.SetCode(contractAddr, contractCode)
+
+			for i := 0; i < b.N; i++ {
+				ret, _, err := Call(contractAddr, []byte{}, &Config{State: state})
+				if err != nil {
+					b.Fatal(err)
+				}
+				if uint64(len(ret)) != n {
+					b.Fatalf("expected return size %d, got %d", n, len(ret))
+				}
+			}
+		})
+	}
+}
+
 func fakeHeader(n uint64, parentHash common.Hash) *types.Header {
 	header := types.Header{
 		Coinbase:   common.HexToAddress("0x00000000000000000000000000000000deadbeef"),
@@ -244,6 +312,10 @@ func (d *dummyChain) GetHeader(h common.Hash, n uint64) *types.Header {
 	//parentHash := common.Hash{byte(n - 1)}
 	//fmt.Printf("GetHeader(%x, %d) => header with parent %x\n", h, n, parentHash)
 	return fakeHeader(n, parentHash)
+}
+
+func (d *dummyChain) Config() *params.ChainConfig {
+	return nil
 }
 
 // TestBlockhash tests the blockhash operation. It's a bit special, since it internally
@@ -321,42 +393,28 @@ func TestBlockhash(t *testing.T) {
 	}
 }
 
-type stepCounter struct {
-	inner *vm.JSONLogger
-	steps int
-}
-
-func (s *stepCounter) CaptureStart(env *vm.EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
-}
-
-func (s *stepCounter) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, depth int, err error) {
-}
-
-func (s *stepCounter) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) {}
-
-func (s *stepCounter) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
-	s.steps++
-	// Enable this for more output
-	//s.inner.CaptureState(env, pc, op, gas, cost, memory, stack, rStack, contract, depth, err)
-}
-
 // benchmarkNonModifyingCode benchmarks code, but if the code modifies the
 // state, this should not be used, since it does not reset the state between runs.
-func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.B) {
+func benchmarkNonModifyingCode(gas uint64, code []byte, name string, tracerCode string, b *testing.B) {
 	cfg := new(Config)
 	setDefaults(cfg)
-	cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+	cfg.State, _ = state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
 	cfg.GasLimit = gas
-	var (
-		destination = common.BytesToAddress([]byte("contract"))
-		vmenv       = NewEnv(cfg)
-		sender      = vm.AccountRef(cfg.Origin)
-	)
+	if len(tracerCode) > 0 {
+		tracer, err := tracers.DefaultDirectory.New(tracerCode, new(tracers.Context), nil, cfg.ChainConfig)
+		if err != nil {
+			b.Fatal(err)
+		}
+		cfg.EVMConfig = vm.Config{
+			Tracer: tracer.Hooks,
+		}
+	}
+	destination := common.BytesToAddress([]byte("contract"))
 	cfg.State.CreateAccount(destination)
 	eoa := common.HexToAddress("E0")
 	{
 		cfg.State.CreateAccount(eoa)
-		cfg.State.SetNonce(eoa, 100)
+		cfg.State.SetNonce(eoa, 100, tracing.NonceChangeUnspecified)
 	}
 	reverting := common.HexToAddress("EE")
 	{
@@ -371,12 +429,12 @@ func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.
 	//cfg.State.CreateAccount(cfg.Origin)
 	// set the receiver's (the executing contract) code for execution.
 	cfg.State.SetCode(destination, code)
-	vmenv.Call(sender, destination, nil, gas, cfg.Value)
+	Call(destination, nil, cfg)
 
 	b.Run(name, func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			vmenv.Call(sender, destination, nil, gas, cfg.Value)
+			Call(destination, nil, cfg)
 		}
 	})
 }
@@ -384,114 +442,61 @@ func benchmarkNonModifyingCode(gas uint64, code []byte, name string, b *testing.
 // BenchmarkSimpleLoop test a pretty simple loop which loops until OOG
 // 55 ms
 func BenchmarkSimpleLoop(b *testing.B) {
+	p, lbl := program.New().Jumpdest()
+	// Call identity, and pop return value
+	staticCallIdentity := p.
+		StaticCall(nil, 0x4, 0, 0, 0, 0).
+		Op(vm.POP).Jump(lbl).Bytes() // pop return value and jump to label
 
-	staticCallIdentity := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),       // out offset
-		byte(vm.DUP1),       // out insize
-		byte(vm.DUP1),       // in offset
-		byte(vm.PUSH1), 0x4, // address of identity
-		byte(vm.GAS), // gas
-		byte(vm.STATICCALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	p, lbl = program.New().Jumpdest()
+	callIdentity := p.
+		Call(nil, 0x4, 0, 0, 0, 0, 0).
+		Op(vm.POP).Jump(lbl).Bytes() // pop return value and jump to label
 
-	callIdentity := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),       // out offset
-		byte(vm.DUP1),       // out insize
-		byte(vm.DUP1),       // in offset
-		byte(vm.DUP1),       // value
-		byte(vm.PUSH1), 0x4, // address of identity
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	p, lbl = program.New().Jumpdest()
+	callInexistant := p.
+		Call(nil, 0xff, 0, 0, 0, 0, 0).
+		Op(vm.POP).Jump(lbl).Bytes() // pop return value and jump to label
 
-	callInexistant := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.DUP1),        // out insize
-		byte(vm.DUP1),        // in offset
-		byte(vm.DUP1),        // value
-		byte(vm.PUSH1), 0xff, // address of existing contract
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	p, lbl = program.New().Jumpdest()
+	callEOA := p.
+		Call(nil, 0xE0, 0, 0, 0, 0, 0). // call addr of EOA
+		Op(vm.POP).Jump(lbl).Bytes()    // pop return value and jump to label
 
-	callEOA := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.DUP1),        // out insize
-		byte(vm.DUP1),        // in offset
-		byte(vm.DUP1),        // value
-		byte(vm.PUSH1), 0xE0, // address of EOA
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	p, lbl = program.New().Jumpdest()
+	// Push as if we were making call, then pop it off again, and loop
+	loopingCode := p.Push(0).
+		Op(vm.DUP1, vm.DUP1, vm.DUP1).
+		Push(0x4).
+		Op(vm.GAS, vm.POP, vm.POP, vm.POP, vm.POP, vm.POP, vm.POP).
+		Jump(lbl).Bytes()
 
-	loopingCode := []byte{
-		byte(vm.JUMPDEST), //  [ count ]
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),       // out offset
-		byte(vm.DUP1),       // out insize
-		byte(vm.DUP1),       // in offset
-		byte(vm.PUSH1), 0x4, // address of identity
-		byte(vm.GAS), // gas
+	p, lbl = program.New().Jumpdest()
+	loopingCode2 := p.
+		Push(0x01020304).Push(uint64(0x0102030405)).
+		Op(vm.POP, vm.POP).
+		Op(vm.PUSH6).Append(make([]byte, 6)).Op(vm.JUMP). // Jumpdest zero expressed in 6 bytes
+		Jump(lbl).Bytes()
 
-		byte(vm.POP), byte(vm.POP), byte(vm.POP), byte(vm.POP), byte(vm.POP), byte(vm.POP),
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
+	p, lbl = program.New().Jumpdest()
+	callRevertingContractWithInput := p.
+		Call(nil, 0xee, 0, 0, 0x20, 0x0, 0x0).
+		Op(vm.POP).Jump(lbl).Bytes() // pop return value and jump to label
 
-	calllRevertingContractWithInput := []byte{
-		byte(vm.JUMPDEST), //
-		// push args for the call
-		byte(vm.PUSH1), 0, // out size
-		byte(vm.DUP1),        // out offset
-		byte(vm.PUSH1), 0x20, // in size
-		byte(vm.PUSH1), 0x00, // in offset
-		byte(vm.PUSH1), 0x00, // value
-		byte(vm.PUSH1), 0xEE, // address of reverting contract
-		byte(vm.GAS), // gas
-		byte(vm.CALL),
-		byte(vm.POP),      // pop return value
-		byte(vm.PUSH1), 0, // jumpdestination
-		byte(vm.JUMP),
-	}
-
-	//tracer := vm.NewJSONLogger(nil, os.Stdout)
+	//tracer := logger.NewJSONLogger(nil, os.Stdout)
 	//Execute(loopingCode, nil, &Config{
 	//	EVMConfig: vm.Config{
 	//		Debug:  true,
 	//		Tracer: tracer,
 	//	}})
 	// 100M gas
-	benchmarkNonModifyingCode(100000000, staticCallIdentity, "staticcall-identity-100M", b)
-	benchmarkNonModifyingCode(100000000, callIdentity, "call-identity-100M", b)
-	benchmarkNonModifyingCode(100000000, loopingCode, "loop-100M", b)
-	benchmarkNonModifyingCode(100000000, callInexistant, "call-nonexist-100M", b)
-	benchmarkNonModifyingCode(100000000, callEOA, "call-EOA-100M", b)
-	benchmarkNonModifyingCode(100000000, calllRevertingContractWithInput, "call-reverting-100M", b)
+	benchmarkNonModifyingCode(100000000, staticCallIdentity, "staticcall-identity-100M", "", b)
+	benchmarkNonModifyingCode(100000000, callIdentity, "call-identity-100M", "", b)
+	benchmarkNonModifyingCode(100000000, loopingCode, "loop-100M", "", b)
+	benchmarkNonModifyingCode(100000000, loopingCode2, "loop2-100M", "", b)
+	benchmarkNonModifyingCode(100000000, callInexistant, "call-nonexist-100M", "", b)
+	benchmarkNonModifyingCode(100000000, callEOA, "call-EOA-100M", "", b)
+	benchmarkNonModifyingCode(100000000, callRevertingContractWithInput, "call-reverting-100M", "", b)
 
 	//benchmarkNonModifyingCode(10000000, staticCallIdentity, "staticcall-identity-10M", b)
 	//benchmarkNonModifyingCode(10000000, loopingCode, "loop-10M", b)
@@ -500,15 +505,14 @@ func BenchmarkSimpleLoop(b *testing.B) {
 // TestEip2929Cases contains various testcases that are used for
 // EIP-2929 about gas repricings
 func TestEip2929Cases(t *testing.T) {
-
+	t.Skip("Test only useful for generating documentation")
 	id := 1
 	prettyPrint := func(comment string, code []byte) {
-
 		instrs := make([]string, 0)
 		it := asm.NewInstructionIterator(code)
 		for it.Next() {
 			if it.Arg() != nil && 0 < len(it.Arg()) {
-				instrs = append(instrs, fmt.Sprintf("%v 0x%x", it.Op(), it.Arg()))
+				instrs = append(instrs, fmt.Sprintf("%v %#x", it.Op(), it.Arg()))
 			} else {
 				instrs = append(instrs, fmt.Sprintf("%v", it.Op()))
 			}
@@ -516,13 +520,12 @@ func TestEip2929Cases(t *testing.T) {
 		ops := strings.Join(instrs, ", ")
 		fmt.Printf("### Case %d\n\n", id)
 		id++
-		fmt.Printf("%v\n\nBytecode: \n```\n0x%x\n```\nOperations: \n```\n%v\n```\n\n",
+		fmt.Printf("%v\n\nBytecode: \n```\n%#x\n```\nOperations: \n```\n%v\n```\n\n",
 			comment,
 			code, ops)
 		Execute(code, nil, &Config{
 			EVMConfig: vm.Config{
-				Debug:     true,
-				Tracer:    vm.NewMarkdownLogger(nil, os.Stdout),
+				Tracer:    logger.NewMarkdownLogger(nil, os.Stdout).Hooks(),
 				ExtraEips: []int{2929},
 			},
 		})
@@ -611,7 +614,7 @@ func TestEip2929Cases(t *testing.T) {
 
 // TestColdAccountAccessCost test that the cold account access cost is reported
 // correctly
-// see: https://github.com/Project-DeCloud/chain/issues/22649
+// see: https://github.com/Project-InitVerse/chain/issues/22649
 func TestColdAccountAccessCost(t *testing.T) {
 	for i, tc := range []struct {
 		code []byte
@@ -672,19 +675,278 @@ func TestColdAccountAccessCost(t *testing.T) {
 			want: 7600,
 		},
 	} {
-		tracer := vm.NewStructLogger(nil)
+		var step = 0
+		var have = uint64(0)
 		Execute(tc.code, nil, &Config{
 			EVMConfig: vm.Config{
-				Debug:  true,
-				Tracer: tracer,
+				Tracer: &tracing.Hooks{
+					OnOpcode: func(pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error) {
+						// Uncomment to investigate failures:
+						//t.Logf("%d: %v %d", step, vm.OpCode(op).String(), cost)
+						if step == tc.step {
+							have = cost
+						}
+						step++
+					},
+				},
 			},
 		})
-		have := tracer.StructLogs()[tc.step].GasCost
 		if want := tc.want; have != want {
-			for ii, op := range tracer.StructLogs() {
-				t.Logf("%d: %v %d", ii, op.OpName(), op.GasCost)
+			t.Fatalf("testcase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
+		}
+	}
+}
+
+func TestRuntimeJSTracer(t *testing.T) {
+	jsTracers := []string{
+		`{enters: 0, exits: 0, enterGas: 0, gasUsed: 0, steps:0,
+	step: function() { this.steps++},
+	fault: function() {},
+	result: function() {
+		return [this.enters, this.exits,this.enterGas,this.gasUsed, this.steps].join(",")
+	},
+	enter: function(frame) {
+		this.enters++;
+		this.enterGas = frame.getGas();
+	},
+	exit: function(res) {
+		this.exits++;
+		this.gasUsed = res.getGasUsed();
+	}}`,
+		`{enters: 0, exits: 0, enterGas: 0, gasUsed: 0, steps:0,
+	fault: function() {},
+	result: function() {
+		return [this.enters, this.exits,this.enterGas,this.gasUsed, this.steps].join(",")
+	},
+	enter: function(frame) {
+		this.enters++;
+		this.enterGas = frame.getGas();
+	},
+	exit: function(res) {
+		this.exits++;
+		this.gasUsed = res.getGasUsed();
+	}}`}
+	initcode := program.New().Return(0, 0).Bytes()
+	tests := []struct {
+		code []byte
+		// One result per tracer
+		results []string
+	}{
+		{ // CREATE
+			code: program.New().MstoreSmall(initcode, 0).
+				Push(len(initcode)).      // length
+				Push(32 - len(initcode)). // offset
+				Push(0).                  // value
+				Op(vm.CREATE).
+				Op(vm.POP).Bytes(),
+			results: []string{`"1,1,952853,6,12"`, `"1,1,952853,6,0"`},
+		},
+		{ // CREATE2
+			code: program.New().MstoreSmall(initcode, 0).
+				Push(1).                  // salt
+				Push(len(initcode)).      // length
+				Push(32 - len(initcode)). // offset
+				Push(0).                  // value
+				Op(vm.CREATE2).
+				Op(vm.POP).Bytes(),
+			results: []string{`"1,1,952844,6,13"`, `"1,1,952844,6,0"`},
+		},
+		{ // CALL
+			code:    program.New().Call(nil, 0xbb, 0, 0, 0, 0, 0).Op(vm.POP).Bytes(),
+			results: []string{`"1,1,981796,6,13"`, `"1,1,981796,6,0"`},
+		},
+		{ // CALLCODE
+			code:    program.New().CallCode(nil, 0xcc, 0, 0, 0, 0, 0).Op(vm.POP).Bytes(),
+			results: []string{`"1,1,981796,6,13"`, `"1,1,981796,6,0"`},
+		},
+		{ // STATICCALL
+			code:    program.New().StaticCall(nil, 0xdd, 0, 0, 0, 0).Op(vm.POP).Bytes(),
+			results: []string{`"1,1,981799,6,12"`, `"1,1,981799,6,0"`},
+		},
+		{ // DELEGATECALL
+			code:    program.New().DelegateCall(nil, 0xee, 0, 0, 0, 0).Op(vm.POP).Bytes(),
+			results: []string{`"1,1,981799,6,12"`, `"1,1,981799,6,0"`},
+		},
+		{ // CALL self-destructing contract
+			code:    program.New().Call(nil, 0xff, 0, 0, 0, 0, 0).Op(vm.POP).Bytes(),
+			results: []string{`"2,2,0,5003,12"`, `"2,2,0,5003,0"`},
+		},
+	}
+	calleeCode := []byte{
+		byte(vm.PUSH1), 0,
+		byte(vm.PUSH1), 0,
+		byte(vm.RETURN),
+	}
+	suicideCode := []byte{
+		byte(vm.PUSH1), 0xaa,
+		byte(vm.SELFDESTRUCT),
+	}
+	main := common.HexToAddress("0xaa")
+	for i, jsTracer := range jsTracers {
+		for j, tc := range tests {
+			statedb, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+			statedb.SetCode(main, tc.code)
+			statedb.SetCode(common.HexToAddress("0xbb"), calleeCode)
+			statedb.SetCode(common.HexToAddress("0xcc"), calleeCode)
+			statedb.SetCode(common.HexToAddress("0xdd"), calleeCode)
+			statedb.SetCode(common.HexToAddress("0xee"), calleeCode)
+			statedb.SetCode(common.HexToAddress("0xff"), suicideCode)
+
+			tracer, err := tracers.DefaultDirectory.New(jsTracer, new(tracers.Context), nil, params.MergedTestChainConfig)
+			if err != nil {
+				t.Fatal(err)
 			}
-			t.Fatalf("tescase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
+			_, _, err = Call(main, nil, &Config{
+				GasLimit: 1000000,
+				State:    statedb,
+				EVMConfig: vm.Config{
+					Tracer: tracer.Hooks,
+				}})
+			if err != nil {
+				t.Fatal("didn't expect error", err)
+			}
+			res, err := tracer.GetResult()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if have, want := string(res), tc.results[i]; have != want {
+				t.Errorf("wrong result for tracer %d testcase %d, have \n%v\nwant\n%v\n", i, j, have, want)
+			}
+		}
+	}
+}
+
+func TestJSTracerCreateTx(t *testing.T) {
+	jsTracer := `
+	{enters: 0, exits: 0,
+	step: function() {},
+	fault: function() {},
+	result: function() { return [this.enters, this.exits].join(",") },
+	enter: function(frame) { this.enters++ },
+	exit: function(res) { this.exits++ }}`
+	code := []byte{byte(vm.PUSH1), 0, byte(vm.PUSH1), 0, byte(vm.RETURN)}
+
+	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+	tracer, err := tracers.DefaultDirectory.New(jsTracer, new(tracers.Context), nil, params.MergedTestChainConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, err = Create(code, &Config{
+		State: statedb,
+		EVMConfig: vm.Config{
+			Tracer: tracer.Hooks,
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := tracer.GetResult()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if have, want := string(res), `"0,0"`; have != want {
+		t.Errorf("wrong result for tracer, have \n%v\nwant\n%v\n", have, want)
+	}
+}
+
+func BenchmarkTracerStepVsCallFrame(b *testing.B) {
+	// Simply pushes and pops some values in a loop
+	p, lbl := program.New().Jumpdest()
+	code := p.Push(0).Push(0).Op(vm.POP, vm.POP).Jump(lbl).Bytes()
+	stepTracer := `
+	{
+	step: function() {},
+	fault: function() {},
+	result: function() {},
+	}`
+	callFrameTracer := `
+	{
+	enter: function() {},
+	exit: function() {},
+	fault: function() {},
+	result: function() {},
+	}`
+
+	benchmarkNonModifyingCode(10000000, code, "tracer-step-10M", stepTracer, b)
+	benchmarkNonModifyingCode(10000000, code, "tracer-call-frame-10M", callFrameTracer, b)
+}
+
+// TestDelegatedAccountAccessCost tests that calling an account with an EIP-7702
+// delegation designator incurs the correct amount of gas based on the tracer.
+func TestDelegatedAccountAccessCost(t *testing.T) {
+	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabaseForTesting())
+	statedb.SetCode(common.HexToAddress("0xff"), types.AddressToDelegation(common.HexToAddress("0xaa")))
+	statedb.SetCode(common.HexToAddress("0xaa"), program.New().Return(0, 0).Bytes())
+
+	for i, tc := range []struct {
+		code []byte
+		step int
+		want uint64
+	}{
+		{ // CALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALL), byte(vm.POP),
+			},
+			step: 7,
+			want: 5455,
+		},
+		{ // CALLCODE(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALLCODE), byte(vm.POP),
+			},
+			step: 7,
+			want: 5455,
+		},
+		{ // DELEGATECALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.DELEGATECALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 5455,
+		},
+		{ // STATICCALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.STATICCALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 5455,
+		},
+		{ // SELFDESTRUCT(0xff): should not be affected by resolution
+			code: []byte{
+				byte(vm.PUSH1), 0xff, byte(vm.SELFDESTRUCT),
+			},
+			step: 1,
+			want: 7600,
+		},
+	} {
+		var step = 0
+		var have = uint64(0)
+		Execute(tc.code, nil, &Config{
+			ChainConfig: params.MergedTestChainConfig,
+			State:       statedb,
+			EVMConfig: vm.Config{
+				Tracer: &tracing.Hooks{
+					OnOpcode: func(pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error) {
+						// Uncomment to investigate failures:
+						t.Logf("%d: %v %d", step, vm.OpCode(op).String(), cost)
+						if step == tc.step {
+							have = cost
+						}
+						step++
+					},
+				},
+			},
+		})
+		if want := tc.want; have != want {
+			t.Fatalf("testcase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
 		}
 	}
 }

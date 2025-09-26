@@ -96,6 +96,24 @@ type pair struct {
 	v rlp.RawValue
 }
 
+// Size returns the encoded size of the record.
+func (r *Record) Size() uint64 {
+	if r.raw != nil {
+		return uint64(len(r.raw))
+	}
+	return computeSize(r)
+}
+
+func computeSize(r *Record) uint64 {
+	size := uint64(rlp.IntSize(r.seq))
+	size += rlp.BytesSize(r.signature)
+	for _, p := range r.pairs {
+		size += rlp.StringSize(p.k)
+		size += uint64(len(p.v))
+	}
+	return rlp.ListSize(size)
+}
+
 // Seq returns the sequence number.
 func (r *Record) Seq() uint64 {
 	return r.seq
@@ -304,7 +322,7 @@ func (r *Record) AppendElements(list []interface{}) []interface{} {
 }
 
 func (r *Record) encode(sig []byte) (raw []byte, err error) {
-	list := make([]interface{}, 1, 2*len(r.pairs)+1)
+	list := make([]interface{}, 1, 2*len(r.pairs)+2)
 	list[0] = sig
 	list = r.AppendElements(list)
 	if raw, err = rlp.EncodeToBytes(list); err != nil {

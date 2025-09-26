@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 //go:build none
 // +build none
 
@@ -27,36 +28,57 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Project-InitVerse/chain/core"
-	"github.com/Project-InitVerse/chain/rlp"
 	"math/big"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
+
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/rlp"
 )
 
 type allocItem struct {
-	Addr, Balance *big.Int
-	Code          []byte
+	Addr    *big.Int
+	Balance *big.Int
+	Misc    *allocItemMisc `rlp:"optional"`
 }
 
-type allocList []allocItem
+type allocItemMisc struct {
+	Nonce uint64
+	Code  []byte
+	Slots []allocItemStorageItem
+}
 
-func (a allocList) Len() int           { return len(a) }
-func (a allocList) Less(i, j int) bool { return a[i].Addr.Cmp(a[j].Addr) < 0 }
-func (a allocList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+type allocItemStorageItem struct {
+	Key common.Hash
+	Val common.Hash
+}
 
-func makelist(g *core.Genesis) allocList {
-	a := make(allocList, 0, len(g.Alloc))
+func makelist(g *core.Genesis) []allocItem {
+	items := make([]allocItem, 0, len(g.Alloc))
 	for addr, account := range g.Alloc {
-		if len(account.Storage) > 0 || account.Nonce != 0 {
-			panic(fmt.Sprintf("can't encode account %x", addr))
+		var misc *allocItemMisc
+		if len(account.Storage) > 0 || len(account.Code) > 0 || account.Nonce != 0 {
+			misc = &allocItemMisc{
+				Nonce: account.Nonce,
+				Code:  account.Code,
+				Slots: make([]allocItemStorageItem, 0, len(account.Storage)),
+			}
+			for key, val := range account.Storage {
+				misc.Slots = append(misc.Slots, allocItemStorageItem{key, val})
+			}
+			slices.SortFunc(misc.Slots, func(a, b allocItemStorageItem) int {
+				return a.Key.Cmp(b.Key)
+			})
 		}
 		bigAddr := new(big.Int).SetBytes(addr.Bytes())
-		a = append(a, allocItem{bigAddr, account.Balance, account.Code})
+		items = append(items, allocItem{bigAddr, account.Balance, misc})
 	}
-	sort.Sort(a)
-	return a
+	slices.SortFunc(items, func(a, b allocItem) int {
+		return a.Addr.Cmp(b.Addr)
+	})
+	return items
 }
 
 func makealloc(g *core.Genesis) string {
@@ -73,15 +95,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Usage: mkalloc genesis.json")
 		os.Exit(1)
 	}
+
 	g := new(core.Genesis)
 	file, err := os.Open(os.Args[1])
-
 	if err != nil {
 		panic(err)
 	}
+	defer file.Close()
 	if err := json.NewDecoder(file).Decode(g); err != nil {
 		panic(err)
 	}
-
 	fmt.Println("const allocData =", makealloc(g))
 }

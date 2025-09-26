@@ -31,7 +31,7 @@ import (
 	natpmp "github.com/jackpal/go-nat-pmp"
 )
 
-// An implementation of nat.Interface can map local ports to ports
+// Interface An implementation of nat.Interface can map local ports to ports
 // accessible from the Internet.
 type Interface interface {
 	// These methods manage a mapping between a port on the local
@@ -40,14 +40,14 @@ type Interface interface {
 	// protocol is "UDP" or "TCP". Some implementations allow setting
 	// a display name for the mapping. The mapping may be removed by
 	// the gateway when its lifetime ends.
-	AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) error
+	AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) (uint16, error)
 	DeleteMapping(protocol string, extport, intport int) error
 
-	// This method should return the external (Internet-facing)
+	// ExternalIP should return the external (Internet-facing)
 	// address of the gateway device.
 	ExternalIP() (net.IP, error)
 
-	// Should return name of the method. This is used for logging.
+	// String should return name of the method. This is used for logging.
 	String() string
 }
 
@@ -61,14 +61,17 @@ type Interface interface {
 //	"upnp"               uses the Universal Plug and Play protocol
 //	"pmp"                uses NAT-PMP with an auto-detected gateway address
 //	"pmp:192.168.0.1"    uses NAT-PMP with the given gateway address
+//	"stun"       uses stun protocol with default stun server
+//	"stun:192.168.0.1:1234"   uses stun protocol with stun server address 192.168.0.1:1234
 func Parse(spec string) (Interface, error) {
 	var (
-		parts = strings.SplitN(spec, ":", 2)
-		mech  = strings.ToLower(parts[0])
-		ip    net.IP
+		before, after, found = strings.Cut(spec, ":")
+		mech                 = strings.ToLower(before)
+		ip                   net.IP
 	)
-	if len(parts) > 1 {
-		ip = net.ParseIP(parts[1])
+	// stun is not a valid ip
+	if found && mech != "stun" {
+		ip = net.ParseIP(after)
 		if ip == nil {
 			return nil, errors.New("invalid IP address")
 		}
@@ -87,26 +90,31 @@ func Parse(spec string) (Interface, error) {
 		return UPnP(), nil
 	case "pmp", "natpmp", "nat-pmp":
 		return PMP(ip), nil
+	case "stun":
+		return newSTUN(after)
 	default:
-		return nil, fmt.Errorf("unknown mechanism %q", parts[0])
+		return nil, fmt.Errorf("unknown mechanism %q", before)
 	}
 }
 
 const (
-	mapTimeout = 10 * time.Minute
+	DefaultMapTimeout = 10 * time.Minute
 )
 
 // Map adds a port mapping on m and keeps it alive until c is closed.
 // This function is typically invoked in its own goroutine.
+//
+// Note that Map does not handle the situation where the NAT interface assigns a different
+// external port than the requested one.
 func Map(m Interface, c <-chan struct{}, protocol string, extport, intport int, name string) {
 	log := log.New("proto", protocol, "extport", extport, "intport", intport, "interface", m)
-	refresh := time.NewTimer(mapTimeout)
+	refresh := time.NewTimer(DefaultMapTimeout)
 	defer func() {
 		refresh.Stop()
 		log.Debug("Deleting port mapping")
 		m.DeleteMapping(protocol, extport, intport)
 	}()
-	if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
+	if _, err := m.AddMapping(protocol, extport, intport, name, DefaultMapTimeout); err != nil {
 		log.Debug("Couldn't add port mapping", "err", err)
 	} else {
 		log.Info("Mapped network port")
@@ -119,10 +127,10 @@ func Map(m Interface, c <-chan struct{}, protocol string, extport, intport int, 
 			}
 		case <-refresh.C:
 			log.Trace("Refreshing port mapping")
-			if err := m.AddMapping(protocol, extport, intport, name, mapTimeout); err != nil {
+			if _, err := m.AddMapping(protocol, extport, intport, name, DefaultMapTimeout); err != nil {
 				log.Debug("Couldn't add port mapping", "err", err)
 			}
-			refresh.Reset(mapTimeout)
+			refresh.Reset(DefaultMapTimeout)
 		}
 	}
 }
@@ -132,20 +140,23 @@ func Map(m Interface, c <-chan struct{}, protocol string, extport, intport int, 
 // Mapping operations will not return an error but won't actually do anything.
 type ExtIP net.IP
 
-func (n ExtIP) ExternalIP() (net.IP, error) { return net.IP(n), nil }
-func (n ExtIP) String() string              { return fmt.Sprintf("ExtIP(%v)", net.IP(n)) }
+func (n ExtIP) ExternalIP() (net.IP, error)  { return net.IP(n), nil }
+func (n ExtIP) String() string               { return fmt.Sprintf("ExtIP(%v)", net.IP(n)) }
+func (n ExtIP) MarshalText() ([]byte, error) { return []byte(fmt.Sprintf("extip:%v", net.IP(n))), nil }
 
 // These do nothing.
 
-func (ExtIP) AddMapping(string, int, int, string, time.Duration) error { return nil }
-func (ExtIP) DeleteMapping(string, int, int) error                     { return nil }
+func (ExtIP) AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) (uint16, error) {
+	return uint16(extport), nil
+}
+func (ExtIP) DeleteMapping(string, int, int) error { return nil }
 
 // Any returns a port mapper that tries to discover any supported
 // mechanism on the local network.
 func Any() Interface {
 	// TODO: attempt to discover whether the local machine has an
 	// Internet-class address. Return ExtIP in this case.
-	return startautodisc("UPnP or NAT-PMP", func() Interface {
+	return startautodisc("any", func() Interface {
 		found := make(chan Interface, 2)
 		gopool.Submit(func() { found <- discoverUPnP() })
 		gopool.Submit(func() { found <- discoverPMP() })
@@ -161,7 +172,7 @@ func Any() Interface {
 // UPnP returns a port mapper that uses UPnP. It will attempt to
 // discover the address of your router using UDP broadcasts.
 func UPnP() Interface {
-	return startautodisc("UPnP", discoverUPnP)
+	return startautodisc("upnp", discoverUPnP)
 }
 
 // PMP returns a port mapper that uses NAT-PMP. The provided gateway
@@ -171,7 +182,7 @@ func PMP(gateway net.IP) Interface {
 	if gateway != nil {
 		return &pmp{gw: gateway, c: natpmp.NewClient(gateway)}
 	}
-	return startautodisc("NAT-PMP", discoverPMP)
+	return startautodisc("natpmp", discoverPMP)
 }
 
 // autodisc represents a port mapping mechanism that is still being
@@ -195,9 +206,9 @@ func startautodisc(what string, doit func() Interface) Interface {
 	return &autodisc{what: what, doit: doit}
 }
 
-func (n *autodisc) AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) error {
+func (n *autodisc) AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) (uint16, error) {
 	if err := n.wait(); err != nil {
-		return err
+		return 0, err
 	}
 	return n.found.AddMapping(protocol, extport, intport, name, lifetime)
 }
@@ -223,6 +234,10 @@ func (n *autodisc) String() string {
 		return n.what
 	}
 	return n.found.String()
+}
+
+func (n *autodisc) MarshalText() ([]byte, error) {
+	return []byte(n.what), nil
 }
 
 // wait blocks until auto-discovery has been performed.
