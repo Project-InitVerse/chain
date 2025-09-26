@@ -5,11 +5,18 @@ name: Build
 
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - '.github/**'
+      - '.gitignore'
+      - 'README.md'
     branches:
-      - "main"
+      - main
+    tags:
+      - 'v*.*.*'
   pull_request:
     branches:
-    - "main"
+      - main
   workflow_dispatch:
 
 env:
