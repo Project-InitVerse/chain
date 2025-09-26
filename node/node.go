@@ -17,24 +17,32 @@
 package node
 
 import (
+	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/common/hexutil"
 	"github.com/Project-InitVerse/chain/core/rawdb"
+	"github.com/Project-InitVerse/chain/eth/ethconfig"
 	"github.com/Project-InitVerse/chain/ethdb"
+	"github.com/Project-InitVerse/chain/ethdb/leveldb"
+	"github.com/Project-InitVerse/chain/ethdb/memorydb"
 	"github.com/Project-InitVerse/chain/event"
 	"github.com/Project-InitVerse/chain/log"
 	"github.com/Project-InitVerse/chain/p2p"
 	"github.com/Project-InitVerse/chain/rpc"
-	"github.com/prometheus/tsdb/fileutil"
+	"github.com/gofrs/flock"
 )
 
 // Node is a container on which services can be registered.
@@ -43,18 +51,21 @@ type Node struct {
 	config        *Config
 	accman        *accounts.Manager
 	log           log.Logger
-	ephemKeystore string            // if non-empty, the key directory that will be removed by Stop
-	dirLock       fileutil.Releaser // prevents concurrent use of instance directory
-	stop          chan struct{}     // Channel to wait for termination notifications
-	server        *p2p.Server       // Currently running P2P networking layer
-	startStopLock sync.Mutex        // Start/Stop are protected by an additional lock
-	state         int               // Tracks state of node lifecycle
+	keyDir        string        // key store directory
+	keyDirTemp    bool          // If true, key directory will be removed by Stop
+	dirLock       *flock.Flock  // prevents concurrent use of instance directory
+	stop          chan struct{} // Channel to wait for termination notifications
+	server        *p2p.Server   // Currently running P2P networking layer
+	startStopLock sync.Mutex    // Start/Stop are protected by an additional lock
+	state         int           // Tracks state of node lifecycle
 
 	lock          sync.Mutex
 	lifecycles    []Lifecycle // All registered backends, services, and auxiliary services that have a lifecycle
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
 	http          *httpServer //
 	ws            *httpServer //
+	httpAuth      *httpServer //
+	wsAuth        *httpServer //
 	ipc           *ipcServer  // Stores information about the ipc http server
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
@@ -65,7 +76,15 @@ const (
 	initializingState = iota
 	runningState
 	closedState
+	blockDbCacheSize           = 256
+	blockDbHandlesMinSize      = 1000
+	blockDbHandlesMaxSize      = 2000
+	chainDbMemoryPercentage    = 50
+	chainDbHandlesPercentage   = 50
+	diffStoreHandlesPercentage = 20
 )
+
+const StateDBNamespace = "eth/db/statedata/"
 
 // New creates a new P2P node, ready for protocol registration.
 func New(conf *Config) (*Node, error) {
@@ -81,13 +100,40 @@ func New(conf *Config) (*Node, error) {
 		conf.DataDir = absdatadir
 	}
 	if conf.LogConfig != nil {
-		logFilePath := ""
-		if conf.LogConfig.FileRoot == "" {
-			logFilePath = path.Join(conf.DataDir, conf.LogConfig.FilePath)
-		} else {
-			logFilePath = path.Join(conf.LogConfig.FileRoot, conf.LogConfig.FilePath)
+		if conf.LogConfig.TermTimeFormat != nil && *conf.LogConfig.TermTimeFormat != "" {
+			log.SetTermTimeFormat(*conf.LogConfig.TermTimeFormat)
 		}
-		log.Root().SetHandler(log.NewFileLvlHandler(logFilePath, conf.LogConfig.MaxBytesSize, conf.LogConfig.Level))
+
+		if conf.LogConfig.TimeFormat != nil && *conf.LogConfig.TimeFormat != "" {
+			log.SetTimeFormat(*conf.LogConfig.TimeFormat)
+		}
+
+		if conf.LogConfig.FileRoot != nil && conf.LogConfig.FilePath != nil &&
+			conf.LogConfig.MaxBytesSize != nil && conf.LogConfig.Level != nil {
+			// log to file
+			logFilePath := ""
+			if *conf.LogConfig.FileRoot == "" {
+				logFilePath = path.Join(conf.DataDir, *conf.LogConfig.FilePath)
+			} else {
+				logFilePath = path.Join(*conf.LogConfig.FileRoot, *conf.LogConfig.FilePath)
+			}
+
+			rotateHours := uint(1) // To maintain backwards compatibility, if RotateHours is not set, then it defaults to 1
+			if conf.LogConfig.RotateHours != nil {
+				if *conf.LogConfig.RotateHours > 23 {
+					return nil, errors.New("Config.LogConfig.RotateHours cannot be greater than 23")
+				}
+
+				rotateHours = *conf.LogConfig.RotateHours
+			}
+
+			maxBackups := uint(0)
+			if conf.LogConfig.MaxBackups != nil {
+				maxBackups = *conf.LogConfig.MaxBackups
+			}
+
+			log.SetDefault(log.NewLogger(log.RotatingFileHandler(logFilePath, *conf.LogConfig.MaxBytesSize, maxBackups, *conf.LogConfig.Level, rotateHours)))
+		}
 	}
 	if conf.Logger == nil {
 		conf.Logger = log.New()
@@ -104,10 +150,11 @@ func New(conf *Config) (*Node, error) {
 	if strings.HasSuffix(conf.Name, ".ipc") {
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
 	}
-
+	server := rpc.NewServer()
+	server.SetBatchLimits(conf.BatchRequestLimit, conf.BatchResponseMaxSize)
 	node := &Node{
 		config:        conf,
-		inprocHandler: rpc.NewServer(),
+		inprocHandler: server,
 		eventmux:      new(event.TypeMux),
 		log:           conf.Logger,
 		stop:          make(chan struct{}),
@@ -122,25 +169,21 @@ func New(conf *Config) (*Node, error) {
 	if err := node.openDataDir(); err != nil {
 		return nil, err
 	}
-	// Ensure that the AccountManager method works before the node has started. We rely on
-	// this in cmd/geth.
-	am, ephemeralKeystore, err := makeAccountManager(conf)
+	keyDir, isEphem, err := conf.GetKeyStoreDir()
 	if err != nil {
 		return nil, err
 	}
-	node.accman = am
-	node.ephemKeystore = ephemeralKeystore
+	node.keyDir = keyDir
+	node.keyDirTemp = isEphem
+	// Creates an empty AccountManager with no backends. Callers (e.g. cmd/geth)
+	// are required to add the backends later on.
+	node.accman = accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: conf.InsecureUnlockAllowed})
 
 	// Initialize the p2p server. This creates the node key and discovery databases.
 	node.server.Config.PrivateKey = node.config.NodeKey()
 	node.server.Config.Name = node.config.NodeName()
 	node.server.Config.Logger = node.log
-	if node.server.Config.StaticNodes == nil {
-		node.server.Config.StaticNodes = node.config.StaticNodes()
-	}
-	if node.server.Config.TrustedNodes == nil {
-		node.server.Config.TrustedNodes = node.config.TrustedNodes()
-	}
+	node.config.checkLegacyFiles()
 	if node.server.Config.NodeDatabase == "" {
 		node.server.Config.NodeDatabase = node.config.NodeDB()
 	}
@@ -155,7 +198,9 @@ func New(conf *Config) (*Node, error) {
 
 	// Configure RPC servers.
 	node.http = newHTTPServer(node.log, conf.HTTPTimeouts)
+	node.httpAuth = newHTTPServer(node.log, conf.HTTPTimeouts)
 	node.ws = newHTTPServer(node.log, rpc.DefaultHTTPTimeouts)
+	node.wsAuth = newHTTPServer(node.log, rpc.DefaultHTTPTimeouts)
 	node.ipc = newIPCServer(node.log, conf.IPCEndpoint())
 
 	return node, nil
@@ -243,8 +288,8 @@ func (n *Node) doClose(errs []error) error {
 	if err := n.accman.Close(); err != nil {
 		errs = append(errs, err)
 	}
-	if n.ephemKeystore != "" {
-		if err := os.RemoveAll(n.ephemKeystore); err != nil {
+	if n.keyDirTemp {
+		if err := os.RemoveAll(n.keyDir); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -282,16 +327,6 @@ func (n *Node) openEndpoints() error {
 	return err
 }
 
-// containsLifecycle checks if 'lfs' contains 'l'.
-func containsLifecycle(lfs []Lifecycle, l Lifecycle) bool {
-	for _, obj := range lfs {
-		if obj == l {
-			return true
-		}
-	}
-	return false
-}
-
 // stopServices terminates running services, RPC and p2p networking.
 // It is the inverse of Start.
 func (n *Node) stopServices(running []Lifecycle) error {
@@ -325,94 +360,232 @@ func (n *Node) openDataDir() error {
 	}
 	// Lock the instance directory to prevent concurrent use by another instance as well as
 	// accidental use of the instance directory as a database.
-	release, _, err := fileutil.Flock(filepath.Join(instdir, "LOCK"))
-	if err != nil {
-		return convertFileLockError(err)
+	n.dirLock = flock.New(filepath.Join(instdir, "LOCK"))
+
+	if locked, err := n.dirLock.TryLock(); err != nil {
+		return err
+	} else if !locked {
+		return ErrDatadirUsed
 	}
-	n.dirLock = release
 	return nil
 }
 
 func (n *Node) closeDataDir() {
 	// Release instance directory lock.
-	if n.dirLock != nil {
-		if err := n.dirLock.Release(); err != nil {
-			n.log.Error("Can't release datadir lock", "err", err)
-		}
+	if n.dirLock != nil && n.dirLock.Locked() {
+		n.dirLock.Unlock()
 		n.dirLock = nil
 	}
 }
 
-// configureRPC is a helper method to configure all the various RPC endpoints during node
+// ObtainJWTSecret loads the jwt-secret from the provided config. If the file is not
+// present, it generates a new secret and stores to the given location.
+func ObtainJWTSecret(fileName string) ([]byte, error) {
+	// try reading from file
+	if data, err := os.ReadFile(fileName); err == nil {
+		jwtSecret := common.FromHex(strings.TrimSpace(string(data)))
+		if len(jwtSecret) == 32 {
+			log.Info("Loaded JWT secret file", "path", fileName, "crc32", fmt.Sprintf("%#x", crc32.ChecksumIEEE(jwtSecret)))
+			return jwtSecret, nil
+		}
+		log.Error("Invalid JWT secret", "path", fileName, "length", len(jwtSecret))
+		return nil, errors.New("invalid JWT secret")
+	}
+	// Need to generate one
+	jwtSecret := make([]byte, 32)
+	crand.Read(jwtSecret)
+	// if we're in --dev mode, don't bother saving, just show it
+	if fileName == "" {
+		log.Info("Generated ephemeral JWT secret", "secret", hexutil.Encode(jwtSecret))
+		return jwtSecret, nil
+	}
+	if err := os.WriteFile(fileName, []byte(hexutil.Encode(jwtSecret)), 0600); err != nil {
+		return nil, err
+	}
+	log.Info("Generated JWT secret", "path", fileName)
+	return jwtSecret, nil
+}
+
+// obtainJWTSecret loads the jwt-secret, either from the provided config,
+// or from the default location. If neither of those are present, it generates
+// a new secret and stores to the default location.
+func (n *Node) obtainJWTSecret(cliParam string) ([]byte, error) {
+	fileName := cliParam
+	if len(fileName) == 0 {
+		// no path provided, use default
+		fileName = n.ResolvePath(datadirJWTKey)
+	}
+	return ObtainJWTSecret(fileName)
+}
+
+// startRPC is a helper method to configure all the various RPC endpoints during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
 func (n *Node) startRPC() error {
-	if err := n.startInProc(); err != nil {
+	// Filter out personal api
+	var apis []rpc.API
+	for _, api := range n.rpcAPIs {
+		if api.Namespace == "personal" {
+			if n.config.EnablePersonal {
+				log.Warn("Deprecated personal namespace activated")
+			} else {
+				continue
+			}
+		}
+		apis = append(apis, api)
+	}
+	if err := n.startInProc(apis); err != nil {
 		return err
 	}
 
 	// Configure IPC.
 	if n.ipc.endpoint != "" {
-		if err := n.ipc.start(n.rpcAPIs); err != nil {
+		if err := n.ipc.start(apis); err != nil {
 			return err
 		}
 	}
+	var (
+		servers           []*httpServer
+		openAPIs, allAPIs = n.getAPIs()
+	)
 
-	// Configure HTTP.
-	if n.config.HTTPHost != "" {
-		config := httpConfig{
+	rpcConfig := rpcEndpointConfig{
+		batchItemLimit:         n.config.BatchRequestLimit,
+		batchResponseSizeLimit: n.config.BatchResponseMaxSize,
+	}
+
+	initHttp := func(server *httpServer, port int) error {
+		if err := server.setListenAddr(n.config.HTTPHost, port); err != nil {
+			return err
+		}
+		if err := server.enableRPC(openAPIs, httpConfig{
 			CorsAllowedOrigins: n.config.HTTPCors,
 			Vhosts:             n.config.HTTPVirtualHosts,
 			Modules:            n.config.HTTPModules,
 			prefix:             n.config.HTTPPathPrefix,
-		}
-		if err := n.http.setListenAddr(n.config.HTTPHost, n.config.HTTPPort); err != nil {
+			rpcEndpointConfig:  rpcConfig,
+		}); err != nil {
 			return err
 		}
-		if err := n.http.enableRPC(n.rpcAPIs, config); err != nil {
+		servers = append(servers, server)
+		return nil
+	}
+
+	initWS := func(port int) error {
+		server := n.wsServerForPort(port, false)
+		if err := server.setListenAddr(n.config.WSHost, port); err != nil {
+			return err
+		}
+		if err := server.enableWS(openAPIs, wsConfig{
+			Modules:           n.config.WSModules,
+			Origins:           n.config.WSOrigins,
+			prefix:            n.config.WSPathPrefix,
+			messageSizeLimit:  n.config.WSMessageSizeLimit,
+			rpcEndpointConfig: rpcConfig,
+		}); err != nil {
+			return err
+		}
+		servers = append(servers, server)
+		return nil
+	}
+
+	initAuth := func(port int, secret []byte) error {
+		// Enable auth via HTTP
+		server := n.httpAuth
+		if err := server.setListenAddr(n.config.AuthAddr, port); err != nil {
+			return err
+		}
+		sharedConfig := rpcEndpointConfig{
+			jwtSecret:              secret,
+			batchItemLimit:         engineAPIBatchItemLimit,
+			batchResponseSizeLimit: engineAPIBatchResponseSizeLimit,
+			httpBodyLimit:          engineAPIBodyLimit,
+		}
+		err := server.enableRPC(allAPIs, httpConfig{
+			CorsAllowedOrigins: DefaultAuthCors,
+			Vhosts:             n.config.AuthVirtualHosts,
+			Modules:            DefaultAuthModules,
+			prefix:             DefaultAuthPrefix,
+			rpcEndpointConfig:  sharedConfig,
+		})
+		if err != nil {
+			return err
+		}
+		servers = append(servers, server)
+
+		// Enable auth via WS
+		server = n.wsServerForPort(port, true)
+		if err := server.setListenAddr(n.config.AuthAddr, port); err != nil {
+			return err
+		}
+		if err := server.enableWS(allAPIs, wsConfig{
+			Modules:           DefaultAuthModules,
+			Origins:           DefaultAuthOrigins,
+			prefix:            DefaultAuthPrefix,
+			rpcEndpointConfig: sharedConfig,
+		}); err != nil {
+			return err
+		}
+		servers = append(servers, server)
+		return nil
+	}
+
+	// Set up HTTP.
+	if n.config.HTTPHost != "" {
+		// Configure legacy unauthenticated HTTP.
+		if err := initHttp(n.http, n.config.HTTPPort); err != nil {
 			return err
 		}
 	}
-
 	// Configure WebSocket.
 	if n.config.WSHost != "" {
-		server := n.wsServerForPort(n.config.WSPort)
-		config := wsConfig{
-			Modules: n.config.WSModules,
-			Origins: n.config.WSOrigins,
-			prefix:  n.config.WSPathPrefix,
-		}
-		if err := server.setListenAddr(n.config.WSHost, n.config.WSPort); err != nil {
-			return err
-		}
-		if err := server.enableWS(n.rpcAPIs, config); err != nil {
+		// legacy unauthenticated
+		if err := initWS(n.config.WSPort); err != nil {
 			return err
 		}
 	}
-
-	if err := n.http.start(); err != nil {
-		return err
+	// Configure authenticated API
+	if len(openAPIs) != len(allAPIs) {
+		jwtSecret, err := n.obtainJWTSecret(n.config.JWTSecret)
+		if err != nil {
+			return err
+		}
+		if err := initAuth(n.config.AuthPort, jwtSecret); err != nil {
+			return err
+		}
 	}
-	return n.ws.start()
+	// Start the servers
+	for _, server := range servers {
+		if err := server.start(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (n *Node) wsServerForPort(port int) *httpServer {
-	if n.config.HTTPHost == "" || n.http.port == port {
-		return n.http
+func (n *Node) wsServerForPort(port int, authenticated bool) *httpServer {
+	httpServer, wsServer := n.http, n.ws
+	if authenticated {
+		httpServer, wsServer = n.httpAuth, n.wsAuth
 	}
-	return n.ws
+	if n.config.HTTPHost == "" || httpServer.port == port {
+		return httpServer
+	}
+	return wsServer
 }
 
 func (n *Node) stopRPC() {
 	n.http.stop()
 	n.ws.stop()
+	n.httpAuth.stop()
+	n.wsAuth.stop()
 	n.ipc.stop()
 	n.stopInProc()
 }
 
 // startInProc registers all RPC APIs on the inproc server.
-func (n *Node) startInProc() error {
-	for _, api := range n.rpcAPIs {
+func (n *Node) startInProc(apis []rpc.API) error {
+	for _, api := range apis {
 		if err := n.inprocHandler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
 		}
@@ -438,7 +611,7 @@ func (n *Node) RegisterLifecycle(lifecycle Lifecycle) {
 	if n.state != initializingState {
 		panic("can't register lifecycle on running/stopped node")
 	}
-	if containsLifecycle(n.lifecycles, lifecycle) {
+	if slices.Contains(n.lifecycles, lifecycle) {
 		panic(fmt.Sprintf("attempt to register lifecycle %T more than once", lifecycle))
 	}
 	n.lifecycles = append(n.lifecycles, lifecycle)
@@ -466,6 +639,17 @@ func (n *Node) RegisterAPIs(apis []rpc.API) {
 	n.rpcAPIs = append(n.rpcAPIs, apis...)
 }
 
+// getAPIs return two sets of APIs, both the ones that do not require
+// authentication, and the complete set
+func (n *Node) getAPIs() (unauthenticated, all []rpc.API) {
+	for _, api := range n.rpcAPIs {
+		if !api.Authenticated {
+			unauthenticated = append(unauthenticated, api)
+		}
+	}
+	return unauthenticated, n.rpcAPIs
+}
+
 // RegisterHandler mounts a handler on the given path on the canonical HTTP server.
 //
 // The name of the handler is shown in a log message when the HTTP server starts
@@ -483,8 +667,8 @@ func (n *Node) RegisterHandler(name, path string, handler http.Handler) {
 }
 
 // Attach creates an RPC client attached to an in-process API handler.
-func (n *Node) Attach() (*rpc.Client, error) {
-	return rpc.DialInProc(n.inprocHandler), nil
+func (n *Node) Attach() *rpc.Client {
+	return rpc.DialInProc(n.inprocHandler)
 }
 
 // RPCHandler returns the in-process RPC request handler.
@@ -524,6 +708,11 @@ func (n *Node) InstanceDir() string {
 	return n.config.instanceDir()
 }
 
+// KeyStoreDir retrieves the key directory
+func (n *Node) KeyStoreDir() string {
+	return n.keyDir
+}
+
 // AccountManager retrieves the account manager used by the protocol stack.
 func (n *Node) AccountManager() *accounts.Manager {
 	return n.accman
@@ -548,6 +737,19 @@ func (n *Node) WSEndpoint() string {
 	return "ws://" + n.ws.listenAddr() + n.ws.wsConfig.prefix
 }
 
+// HTTPAuthEndpoint returns the URL of the authenticated HTTP server.
+func (n *Node) HTTPAuthEndpoint() string {
+	return "http://" + n.httpAuth.listenAddr()
+}
+
+// WSAuthEndpoint returns the current authenticated JSON-RPC over WebSocket endpoint.
+func (n *Node) WSAuthEndpoint() string {
+	if n.httpAuth.wsAllowed() {
+		return "ws://" + n.httpAuth.listenAddr() + n.httpAuth.wsConfig.prefix
+	}
+	return "ws://" + n.wsAuth.listenAddr() + n.wsAuth.wsConfig.prefix
+}
+
 // EventMux retrieves the event multiplexer used by all the network services in
 // the current protocol stack.
 func (n *Node) EventMux() *event.TypeMux {
@@ -569,13 +771,88 @@ func (n *Node) OpenDatabase(name string, cache, handles int, namespace string, r
 	if n.config.DataDir == "" {
 		db = rawdb.NewMemoryDatabase()
 	} else {
-		db, err = rawdb.NewLevelDBDatabase(n.ResolvePath(name), cache, handles, namespace, readonly)
+		db, err = openDatabase(openOptions{
+			Type:          n.config.DBEngine,
+			Directory:     n.ResolvePath(name),
+			Namespace:     namespace,
+			Cache:         cache,
+			Handles:       handles,
+			ReadOnly:      readonly,
+			MultiDataBase: n.CheckIfMultiDataBase(),
+		})
 	}
-
 	if err == nil {
 		db = n.wrapDatabase(db)
 	}
 	return db, err
+}
+
+func (n *Node) OpenAndMergeDatabase(name string, namespace string, readonly bool, config *ethconfig.Config) (ethdb.Database, error) {
+	var (
+		err                          error
+		stateDiskDb                  ethdb.Database
+		blockDb                      ethdb.Database
+		disableChainDbFreeze         = false
+		blockDbHandlesSize           int
+		diffStoreHandles             int
+		chainDataHandles             = config.DatabaseHandles
+		chainDbCache                 = config.DatabaseCache
+		stateDbCache, stateDbHandles int
+	)
+
+	if config.PersistDiff {
+		diffStoreHandles = config.DatabaseHandles * diffStoreHandlesPercentage / 100
+	}
+	isMultiDatabase := n.CheckIfMultiDataBase()
+	// Open the separated state database if the state directory exists
+	if isMultiDatabase {
+		// Resource allocation rules:
+		// 1) Allocate a fixed percentage of memory for chainDb based on chainDbMemoryPercentage & chainDbHandlesPercentage.
+		// 2) Allocate a fixed size for blockDb based on blockDbCacheSize & blockDbHandlesSize.
+		// 3) Allocate the remaining resources to stateDb.
+		chainDbCache = int(float64(config.DatabaseCache) * chainDbMemoryPercentage / 100)
+		chainDataHandles = int(float64(config.DatabaseHandles) * chainDbHandlesPercentage / 100)
+		if config.DatabaseHandles/10 > blockDbHandlesMaxSize {
+			blockDbHandlesSize = blockDbHandlesMaxSize
+		} else {
+			blockDbHandlesSize = blockDbHandlesMinSize
+		}
+		stateDbCache = config.DatabaseCache - chainDbCache - blockDbCacheSize
+		stateDbHandles = config.DatabaseHandles - chainDataHandles - blockDbHandlesSize
+		disableChainDbFreeze = true
+	}
+
+	chainDB, err := n.OpenDatabaseWithFreezer(name, chainDbCache, chainDataHandles, config.DatabaseFreezer, namespace, readonly, disableChainDbFreeze, false, config.PruneAncientData)
+	if err != nil {
+		return nil, err
+	}
+
+	if isMultiDatabase {
+		// Allocate half of the  handles and chainDbCache to this separate state data database
+		stateDiskDb, err = n.OpenDatabaseWithFreezer(name+"/state", stateDbCache, stateDbHandles, "", "eth/db/statedata/", readonly, true, false, config.PruneAncientData)
+		if err != nil {
+			return nil, err
+		}
+
+		blockDb, err = n.OpenDatabaseWithFreezer(name+"/block", blockDbCacheSize, blockDbHandlesSize, "", "eth/db/blockdata/", readonly, false, false, config.PruneAncientData)
+		if err != nil {
+			return nil, err
+		}
+		log.Warn("Multi-database is an experimental feature")
+		chainDB.SetStateStore(stateDiskDb)
+		chainDB.SetBlockStore(blockDb)
+	}
+
+	if config.PersistDiff {
+		diffStore, err := n.OpenDiffDatabase(name, diffStoreHandles, config.DatabaseDiff, namespace, readonly)
+		if err != nil {
+			chainDB.Close()
+			return nil, err
+		}
+		chainDB.SetDiffStore(diffStore)
+	}
+
+	return chainDB, nil
 }
 
 // OpenDatabaseWithFreezer opens an existing database with the given name (or
@@ -583,37 +860,101 @@ func (n *Node) OpenDatabase(name string, cache, handles int, namespace string, r
 // also attaching a chain freezer to it that moves ancient chain data from the
 // database to immutable append-only files. If the node is an ephemeral one, a
 // memory database is returned.
-func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, freezer, namespace string, readonly bool) (ethdb.Database, error) {
+func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, ancient, namespace string, readonly, disableFreeze, isLastOffset, pruneAncientData bool) (ethdb.Database, error) {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	if n.state == closedState {
 		return nil, ErrNodeStopped
 	}
-
 	var db ethdb.Database
 	var err error
 	if n.config.DataDir == "" {
-		db = rawdb.NewMemoryDatabase()
+		db, err = rawdb.NewDatabaseWithFreezer(memorydb.New(), "", namespace, readonly, false, false, false, false)
 	} else {
-		root := n.ResolvePath(name)
-		switch {
-		case freezer == "":
-			freezer = filepath.Join(root, "ancient")
-		case !filepath.IsAbs(freezer):
-			freezer = n.ResolvePath(freezer)
-		}
-		db, err = rawdb.NewLevelDBDatabaseWithFreezer(root, cache, handles, freezer, namespace, readonly)
+		db, err = openDatabase(openOptions{
+			Type:              n.config.DBEngine,
+			Directory:         n.ResolvePath(name),
+			AncientsDirectory: n.ResolveAncient(name, ancient),
+			Namespace:         namespace,
+			Cache:             cache,
+			Handles:           handles,
+			ReadOnly:          readonly,
+			DisableFreeze:     disableFreeze,
+			IsLastOffset:      isLastOffset,
+			PruneAncientData:  pruneAncientData,
+		})
 	}
-
 	if err == nil {
 		db = n.wrapDatabase(db)
 	}
 	return db, err
 }
 
+// CheckIfMultiDataBase check the state and block subdirectory of db, if subdirectory exists, return true
+func (n *Node) CheckIfMultiDataBase() bool {
+	var (
+		stateExist = true
+		blockExist = true
+	)
+
+	separateStateDir := filepath.Join(n.ResolvePath("chaindata"), "state")
+	fileInfo, stateErr := os.Stat(separateStateDir)
+	if os.IsNotExist(stateErr) || !fileInfo.IsDir() {
+		stateExist = false
+	}
+	separateBlockDir := filepath.Join(n.ResolvePath("chaindata"), "block")
+	blockFileInfo, blockErr := os.Stat(separateBlockDir)
+	if os.IsNotExist(blockErr) || !blockFileInfo.IsDir() {
+		blockExist = false
+	}
+
+	if stateExist && blockExist {
+		return true
+	} else if !stateExist && !blockExist {
+		return false
+	} else {
+		panic("data corruption! missing block or state dir.")
+	}
+}
+
+func (n *Node) OpenDiffDatabase(name string, handles int, diff, namespace string, readonly bool) (*leveldb.Database, error) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	if n.state == closedState {
+		return nil, ErrNodeStopped
+	}
+
+	var db *leveldb.Database
+	var err error
+	if n.config.DataDir == "" {
+		panic("datadir is missing")
+	}
+	root := n.ResolvePath(name)
+	switch {
+	case diff == "":
+		diff = filepath.Join(root, "diff")
+	case !filepath.IsAbs(diff):
+		diff = n.ResolvePath(diff)
+	}
+	db, err = leveldb.New(diff, 0, handles, namespace, readonly)
+
+	return db, err
+}
+
 // ResolvePath returns the absolute path of a resource in the instance directory.
 func (n *Node) ResolvePath(x string) string {
 	return n.config.ResolvePath(x)
+}
+
+// ResolveAncient returns the absolute path of the root ancient directory.
+func (n *Node) ResolveAncient(name string, ancient string) string {
+	switch {
+	case ancient == "":
+		ancient = filepath.Join(n.ResolvePath(name), "ancient")
+	case !filepath.IsAbs(ancient):
+		ancient = n.ResolvePath(ancient)
+	}
+	return ancient
 }
 
 // closeTrackingDB wraps the Close method of a database. When the database is closed by the

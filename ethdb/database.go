@@ -17,7 +17,11 @@
 // Package ethdb defines the interfaces for an Ethereum data store.
 package ethdb
 
-import "io"
+import (
+	"io"
+
+	"github.com/Project-InitVerse/chain/params"
+)
 
 // KeyValueReader wraps the Has and Get method of a backing data store.
 type KeyValueReader interface {
@@ -37,10 +41,24 @@ type KeyValueWriter interface {
 	Delete(key []byte) error
 }
 
-// Stater wraps the Stat method of a backing data store.
-type Stater interface {
-	// Stat returns a particular internal stat of the database.
-	Stat(property string) (string, error)
+// KeyValueRangeDeleter wraps the DeleteRange method of a backing data store.
+type KeyValueRangeDeleter interface {
+	// DeleteRange deletes all of the keys (and values) in the range [start,end)
+	// (inclusive on start, exclusive on end).
+	DeleteRange(start, end []byte) error
+}
+
+// KeyValueStater wraps the Stat method of a backing data store.
+type KeyValueStater interface {
+	// Stat returns the statistic data of the database.
+	Stat() (string, error)
+}
+
+// KeyValueSyncer wraps the SyncKeyValue method of a backing data store.
+type KeyValueSyncer interface {
+	// SyncKeyValue ensures that all pending writes are flushed to disk,
+	// guaranteeing data durability up to the point.
+	SyncKeyValue() error
 }
 
 // Compacter wraps the Compact method of a backing data store.
@@ -60,15 +78,17 @@ type Compacter interface {
 type KeyValueStore interface {
 	KeyValueReader
 	KeyValueWriter
+	KeyValueStater
+	KeyValueSyncer
+	KeyValueRangeDeleter
 	Batcher
 	Iteratee
-	Stater
 	Compacter
 	io.Closer
 }
 
-// AncientReader contains the methods required to read from immutable ancient data.
-type AncientReader interface {
+// AncientReaderOp contains the methods required to read from immutable ancient data.
+type AncientReaderOp interface {
 	// HasAncient returns an indicator whether the specified data exists in the
 	// ancient store.
 	HasAncient(kind string, number uint64) (bool, error)
@@ -76,24 +96,114 @@ type AncientReader interface {
 	// Ancient retrieves an ancient binary blob from the append-only immutable files.
 	Ancient(kind string, number uint64) ([]byte, error)
 
+	// AncientRange retrieves multiple items in sequence, starting from the index 'start'.
+	// It will return
+	//   - at most 'count' items,
+	//   - if maxBytes is specified: at least 1 item (even if exceeding the maxByteSize),
+	//     but will otherwise return as many items as fit into maxByteSize.
+	//   - if maxBytes is not specified, 'count' items will be returned if they are present
+	AncientRange(kind string, start, count, maxBytes uint64) ([][]byte, error)
+
 	// Ancients returns the ancient item numbers in the ancient store.
 	Ancients() (uint64, error)
 
+	// Tail returns the number of first stored item in the ancient store.
+	// This number can also be interpreted as the total deleted items.
+	Tail() (uint64, error)
+
 	// AncientSize returns the ancient size of the specified category.
 	AncientSize(kind string) (uint64, error)
+
+	// ItemAmountInAncient returns the actual length of current ancientDB.
+	ItemAmountInAncient() (uint64, error)
+
+	// AncientOffSet returns the offset of current ancientDB.
+	AncientOffSet() uint64
+}
+
+// AncientReader is the extended ancient reader interface including 'batched' or 'atomic' reading.
+type AncientReader interface {
+	AncientReaderOp
+
+	// ReadAncients runs the given read operation while ensuring that no writes take place
+	// on the underlying ancient store.
+	ReadAncients(fn func(AncientReaderOp) error) (err error)
 }
 
 // AncientWriter contains the methods required to write to immutable ancient data.
 type AncientWriter interface {
-	// AppendAncient injects all binary blobs belong to block at the end of the
-	// append-only immutable table files.
-	AppendAncient(number uint64, hash, header, body, receipt, td []byte) error
+	// ModifyAncients runs a write operation on the ancient store.
+	// If the function returns an error, any changes to the underlying store are reverted.
+	// The integer return value is the total size of the written data.
+	ModifyAncients(func(AncientWriteOp) error) (int64, error)
 
-	// TruncateAncients discards all but the first n ancient data from the ancient store.
-	TruncateAncients(n uint64) error
+	// SyncAncient flushes all in-memory ancient store data to disk.
+	SyncAncient() error
 
-	// Sync flushes all in-memory ancient store data to disk.
-	Sync() error
+	// TruncateHead discards all but the first n ancient data from the ancient store.
+	// After the truncation, the latest item can be accessed it item_n-1(start from 0).
+	TruncateHead(n uint64) (uint64, error)
+
+	// TruncateTail discards the first n ancient data from the ancient store. The already
+	// deleted items are ignored. After the truncation, the earliest item can be accessed
+	// is item_n(start from 0). The deleted items may not be removed from the ancient store
+	// immediately, but only when the accumulated deleted data reach the threshold then
+	// will be removed all together.
+	TruncateTail(n uint64) (uint64, error)
+
+	// TruncateTableTail will truncate certain table to new tail
+	TruncateTableTail(kind string, tail uint64) (uint64, error)
+
+	// ResetTable will reset certain table with new start point
+	ResetTable(kind string, startAt uint64, onlyEmpty bool) error
+}
+
+type FreezerEnv struct {
+	ChainCfg         *params.ChainConfig
+	BlobExtraReserve uint64
+}
+
+// AncientFreezer defines the help functions for freezing ancient data
+type AncientFreezer interface {
+	// SetupFreezerEnv provides params.ChainConfig for checking hark forks, like isCancun.
+	SetupFreezerEnv(env *FreezerEnv) error
+}
+
+// AncientWriteOp is given to the function argument of ModifyAncients.
+type AncientWriteOp interface {
+	// Append adds an RLP-encoded item.
+	Append(kind string, number uint64, item interface{}) error
+
+	// AppendRaw adds an item without RLP-encoding it.
+	AppendRaw(kind string, number uint64, item []byte) error
+}
+
+// AncientStater wraps the Stat method of a backing ancient store.
+type AncientStater interface {
+	// AncientDatadir returns the path of the ancient store directory.
+	//
+	// If the ancient store is not activated, an error is returned.
+	// If an ephemeral ancient store is used, an empty path is returned.
+	//
+	// The path returned by AncientDatadir can be used as the root path
+	// of the ancient store to construct paths for other sub ancient stores.
+	AncientDatadir() (string, error)
+}
+
+type StateStoreReader interface {
+	StateStoreReader() Reader
+}
+
+type BlockStoreReader interface {
+	BlockStoreReader() Reader
+}
+
+// MultiDatabaseReader contains the methods required to read data from both key-value as well as
+// blockStore or stateStore.
+type MultiDatabaseReader interface {
+	KeyValueReader
+	StateStoreReader
+	BlockStoreReader
 }
 
 // Reader contains the methods required to read data from both key-value as well as
@@ -101,31 +211,54 @@ type AncientWriter interface {
 type Reader interface {
 	KeyValueReader
 	AncientReader
-}
-
-// Writer contains the methods required to write data to both key-value as well as
-// immutable ancient data.
-type Writer interface {
-	KeyValueWriter
-	AncientWriter
+	StateStoreReader
+	BlockStoreReader
 }
 
 // AncientStore contains all the methods required to allow handling different
-// ancient data stores backing immutable chain data store.
+// ancient data stores backing immutable data store.
 type AncientStore interface {
 	AncientReader
 	AncientWriter
+	AncientStater
 	io.Closer
 }
 
+type DiffStore interface {
+	DiffStore() KeyValueStore
+	SetDiffStore(diff KeyValueStore)
+}
+
+type StateStore interface {
+	StateStore() Database
+	SetStateStore(state Database)
+	GetStateStore() Database
+}
+
+type BlockStore interface {
+	BlockStore() Database
+	SetBlockStore(block Database)
+	HasSeparateBlockStore() bool
+}
+
+// ResettableAncientStore extends the AncientStore interface by adding a Reset method.
+type ResettableAncientStore interface {
+	AncientStore
+
+	// Reset is designed to reset the entire ancient store to its default state.
+	Reset() error
+}
+
 // Database contains all the methods required by the high level database to not
-// only access the key-value data store but also the chain freezer.
+// only access the key-value data store but also the ancient chain store.
 type Database interface {
-	Reader
-	Writer
-	Batcher
-	Iteratee
-	Stater
-	Compacter
-	io.Closer
+	DiffStore
+	StateStore
+	BlockStore
+	StateStoreReader
+	BlockStoreReader
+	AncientFreezer
+
+	KeyValueStore
+	AncientStore
 }

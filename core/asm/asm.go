@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Provides support for dealing with EVM assembly instructions (e.g., disassembling them).
+// Package asm provides support for dealing with EVM assembly instructions (e.g., disassembling them).
 package asm
 
 import (
@@ -26,22 +26,30 @@ import (
 
 // Iterator for disassembled EVM instructions
 type instructionIterator struct {
-	code    []byte
-	pc      uint64
-	arg     []byte
-	op      vm.OpCode
-	error   error
-	started bool
+	code       []byte
+	pc         uint64
+	arg        []byte
+	op         vm.OpCode
+	error      error
+	started    bool
+	eofEnabled bool
 }
 
-// Create a new instruction iterator.
+// NewInstructionIterator creates a new instruction iterator.
 func NewInstructionIterator(code []byte) *instructionIterator {
 	it := new(instructionIterator)
 	it.code = code
 	return it
 }
 
-// Returns true if there is a next instruction and moves on.
+// NewEOFInstructionIterator creates a new instruction iterator for EOF-code.
+func NewEOFInstructionIterator(code []byte) *instructionIterator {
+	it := NewInstructionIterator(code)
+	it.eofEnabled = true
+	return it
+}
+
+// Next returns true if there is a next instruction and moves on.
 func (it *instructionIterator) Next() bool {
 	if it.error != nil || uint64(len(it.code)) <= it.pc {
 		// We previously reached an error or the end.
@@ -63,13 +71,26 @@ func (it *instructionIterator) Next() bool {
 		// We reached the end.
 		return false
 	}
-
 	it.op = vm.OpCode(it.code[it.pc])
-	if it.op.IsPush() {
-		a := uint64(it.op) - uint64(vm.PUSH1) + 1
-		u := it.pc + 1 + a
+	var a int
+	if !it.eofEnabled { // Legacy code
+		if it.op.IsPush() {
+			a = int(it.op) - int(vm.PUSH0)
+		}
+	} else { // EOF code
+		if it.op == vm.RJUMPV {
+			// RJUMPV is unique as it has a variable sized operand. The total size is
+			// determined by the count byte which immediately follows RJUMPV.
+			maxIndex := int(it.code[it.pc+1])
+			a = (maxIndex+1)*2 + 1
+		} else {
+			a = vm.Immediates(it.op)
+		}
+	}
+	if a > 0 {
+		u := it.pc + 1 + uint64(a)
 		if uint64(len(it.code)) <= it.pc || uint64(len(it.code)) < u {
-			it.error = fmt.Errorf("incomplete push instruction at %v", it.pc)
+			it.error = fmt.Errorf("incomplete instruction at %v", it.pc)
 			return false
 		}
 		it.arg = it.code[it.pc+1 : u]
@@ -79,37 +100,36 @@ func (it *instructionIterator) Next() bool {
 	return true
 }
 
-// Returns any error that may have been encountered.
+// Error returns any error that may have been encountered.
 func (it *instructionIterator) Error() error {
 	return it.error
 }
 
-// Returns the PC of the current instruction.
+// PC returns the PC of the current instruction.
 func (it *instructionIterator) PC() uint64 {
 	return it.pc
 }
 
-// Returns the opcode of the current instruction.
+// Op returns the opcode of the current instruction.
 func (it *instructionIterator) Op() vm.OpCode {
 	return it.op
 }
 
-// Returns the argument of the current instruction.
+// Arg returns the argument of the current instruction.
 func (it *instructionIterator) Arg() []byte {
 	return it.arg
 }
 
-// Pretty-print all disassembled EVM instructions to stdout.
+// PrintDisassembled pretty-print all disassembled EVM instructions to stdout.
 func PrintDisassembled(code string) error {
 	script, err := hex.DecodeString(code)
 	if err != nil {
 		return err
 	}
-
 	it := NewInstructionIterator(script)
 	for it.Next() {
 		if it.Arg() != nil && 0 < len(it.Arg()) {
-			fmt.Printf("%05x: %v 0x%x\n", it.PC(), it.Op(), it.Arg())
+			fmt.Printf("%05x: %v %#x\n", it.PC(), it.Op(), it.Arg())
 		} else {
 			fmt.Printf("%05x: %v\n", it.PC(), it.Op())
 		}
@@ -117,14 +137,14 @@ func PrintDisassembled(code string) error {
 	return it.Error()
 }
 
-// Return all disassembled EVM instructions in human-readable format.
+// Disassemble returns all disassembled EVM instructions in human-readable format.
 func Disassemble(script []byte) ([]string, error) {
 	instrs := make([]string, 0)
 
 	it := NewInstructionIterator(script)
 	for it.Next() {
 		if it.Arg() != nil && 0 < len(it.Arg()) {
-			instrs = append(instrs, fmt.Sprintf("%05x: %v 0x%x\n", it.PC(), it.Op(), it.Arg()))
+			instrs = append(instrs, fmt.Sprintf("%05x: %v %#x\n", it.PC(), it.Op(), it.Arg()))
 		} else {
 			instrs = append(instrs, fmt.Sprintf("%05x: %v\n", it.PC(), it.Op()))
 		}

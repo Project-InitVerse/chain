@@ -19,7 +19,14 @@ package inihash
 import (
 	"errors"
 	"fmt"
+	"github.com/Project-InitVerse/chain/consensus/inihash/systemcontract"
+	"github.com/Project-InitVerse/chain/consensus/inihash/vmcaller"
+	"github.com/Project-InitVerse/chain/core"
+	"github.com/Project-InitVerse/chain/core/tracing"
+	"github.com/Project-InitVerse/chain/core/vm"
 	"github.com/Project-InitVerse/chain/crypto/versaHash"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/holiman/uint256"
 	"github.com/shopspring/decimal"
 	"math"
 	"math/big"
@@ -29,13 +36,12 @@ import (
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/common/gopool"
 	"github.com/Project-InitVerse/chain/consensus"
-	"github.com/Project-InitVerse/chain/consensus/misc"
 	"github.com/Project-InitVerse/chain/core/state"
 	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/params"
 	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/Project-InitVerse/chain/trie"
-	mapset "github.com/deckarep/golang-set"
+	mapset "github.com/deckarep/golang-set/v2"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -46,6 +52,15 @@ var (
 	allowedFutureBlockTimeSeconds = int64(140)                                                  // Max seconds from current time allowed for blocks, before they're considered future blocks
 
 )
+
+type blacklistDirection uint
+
+const (
+	DirectionFrom blacklistDirection = iota
+	DirectionTo
+	DirectionBoth
+)
+const gasLimitBoundDivisorBeforeLorentz uint64 = 256 // The bound divisor of the gas limit, used in update calculations before lorentz hard fork.
 
 // Various error messages to mark blocks invalid. These should be private to
 // prevent engine specific errors from being referenced in the remainder of the
@@ -104,7 +119,7 @@ func CalBlockReward(blockNumber uint64, multi uint64, forkBlock int64, forkMulti
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum inihash engine.
-func (inihash *Inihash) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+func (inihash *Inihash) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// If we're running a full engine faking, accept any input as valid
 	if inihash.config.PowMode == ModeFullFake {
 		return nil
@@ -118,14 +133,15 @@ func (inihash *Inihash) VerifyHeader(chain consensus.ChainHeaderReader, header *
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
 	// Sanity checks passed, do a proper verification
-	return inihash.verifyHeader(chain, header, parent, false, seal, time.Now().Unix())
+	return inihash.verifyHeader(chain, header, parent, false, true, time.Now().Unix())
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications.
-func (inihash *Inihash) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (inihash *Inihash) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header) (chan<- struct{}, <-chan error) {
 	// If we're running a full engine faking, accept any input as valid
 	if inihash.config.PowMode == ModeFullFake || len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
@@ -150,7 +166,7 @@ func (inihash *Inihash) VerifyHeaders(chain consensus.ChainHeaderReader, headers
 	for i := 0; i < workers; i++ {
 		gopool.Submit(func() {
 			for index := range inputs {
-				errors[index] = inihash.verifyHeaderWorker(chain, headers, seals, index, unixNow)
+				errors[index] = inihash.verifyHeaderWorker(chain, headers, index, unixNow)
 				done <- index
 			}
 		})
@@ -186,7 +202,7 @@ func (inihash *Inihash) VerifyHeaders(chain consensus.ChainHeaderReader, headers
 	return abort, errorsOut
 }
 
-func (inihash *Inihash) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool, index int, unixNow int64) error {
+func (inihash *Inihash) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, index int, unixNow int64) error {
 	var parent *types.Header
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
@@ -196,7 +212,7 @@ func (inihash *Inihash) verifyHeaderWorker(chain consensus.ChainHeaderReader, he
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	return inihash.verifyHeader(chain, headers[index], parent, false, seals[index], unixNow)
+	return inihash.verifyHeader(chain, headers[index], parent, false, true, unixNow)
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
@@ -214,7 +230,7 @@ func (inihash *Inihash) VerifyUncles(chain consensus.ChainReader, block *types.B
 		return nil
 	}
 	// Gather the set of past uncles and ancestors
-	uncles, ancestors := mapset.NewSet(), make(map[common.Hash]*types.Header)
+	uncles, ancestors := mapset.NewSet[common.Hash](), make(map[common.Hash]*types.Header)
 
 	number, parent := block.NumberU64()-1, block.ParentHash()
 	for i := 0; i < 7; i++ {
@@ -270,6 +286,7 @@ func (inihash *Inihash) verifyHeader(chain consensus.ChainHeaderReader, header, 
 	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
+
 	// Verify the header's timestamp
 	if !uncle {
 		if header.Time > uint64(unixNow+allowedFutureBlockTimeSeconds) {
@@ -280,7 +297,7 @@ func (inihash *Inihash) verifyHeader(chain consensus.ChainHeaderReader, header, 
 		return errOlderBlockTime
 	}
 	// Verify the block's difficulty based on its timestamp and parent's difficulty
-	expected := inihash.CalcDifficulty(chain, header.Time, parent)
+	expected := CalcDifficulty(chain.Config(), header.Time, parent)
 
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
@@ -300,7 +317,13 @@ func (inihash *Inihash) verifyHeader(chain consensus.ChainHeaderReader, header, 
 	if diff < 0 {
 		diff *= -1
 	}
-	limit := parent.GasLimit / params.GasLimitBoundDivisor
+
+	gasLimitBoundDivisor := gasLimitBoundDivisorBeforeLorentz
+	if chain.Config().IsLorentz(header.Number, header.Time) {
+		gasLimitBoundDivisor = params.GasLimitBoundDivisor
+	}
+
+	limit := parent.GasLimit / gasLimitBoundDivisor
 
 	if uint64(diff) >= limit || header.GasLimit < params.MinGasLimit {
 		return fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.GasLimit, limit)
@@ -310,24 +333,14 @@ func (inihash *Inihash) verifyHeader(chain consensus.ChainHeaderReader, header, 
 		return consensus.ErrInvalidNumber
 	}
 	// Verify the engine specific seal securing the block
-	if seal {
-		if err := inihash.verifySeal(chain, header, false); err != nil {
-			return err
-		}
-	}
-	// If all checks passed, validate any special fields for hard forks
-	//if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
-	//	return err
+	//if seal {
+	//	if err := inihash.verifySeal(chain, header, false); err != nil {
+	//		return err
+	//	}
 	//}
-	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
-		return err
-	}
+
 	return nil
 }
-
-// CalcDifficulty is the difficulty adjustment algorithm. It returns
-// the difficulty that a new block should have when created at time
-// given the parent block's time and difficulty.
 func (inihash *Inihash) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return CalcDifficulty(chain.Config(), time, parent)
 }
@@ -340,7 +353,9 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 	if config.ChainID == nil {
 		return calcDifficulty(time, parent)
 	} else if config.ChainID.Int64() == 7234 {
-		if parent.Number.Int64() >= params.TestnetForkBlockNumber {
+		if config.IsNewTon(parent.Number) {
+			return calcDifficultyNewTon(time, parent)
+		} else if parent.Number.Int64() >= params.TestnetForkBlockNumber {
 			return calcDifficultyNew(time, parent)
 		} else {
 			return calcDifficulty(time, parent)
@@ -348,7 +363,9 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 
 	} else if config.ChainID.Int64() == 7233 {
 		//mainnet
-		if parent.Number.Int64() >= params.MainnetForkBlockNumber {
+		if config.IsNewTon(parent.Number) {
+			return calcDifficultyNewTon(time, parent)
+		} else if parent.Number.Int64() >= params.MainnetForkBlockNumber {
 			return calcDifficultyNew(time, parent)
 		} else {
 			return calcDifficulty(time, parent)
@@ -439,6 +456,37 @@ func calcDifficultyNew(time uint64, parent *types.Header) *big.Int {
 
 	return x
 }
+func calcDifficultyNewTon(time uint64, parent *types.Header) *big.Int {
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
+	// algorithm:
+	// diff = (parent_diff +
+	//         (parent_diff / 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))
+	//        )
+	bigTime := new(big.Int).SetUint64(time)
+	bigParentTime := new(big.Int).SetUint64(parent.Time)
+	// holds intermediate values to make the algo easier to read & audit
+	x := new(big.Int)
+	y := new(big.Int)
+	// 5 - (block_timestamp - parent_timestamp) // 2
+	x.Sub(bigTime, bigParentTime)
+	x.Div(x, big2)
+	x.Sub(big5, x)
+	// max(5 - (block_timestamp - parent_timestamp) // 5, -99)
+	if x.Cmp(bigMinus99) < 0 {
+		x.Set(bigMinus99)
+	}
+	// (parent_diff + parent_diff // 2048 * max(5 - (block_timestamp - parent_timestamp) // 2, -99))
+	y.Div(parent.Difficulty, params.NewDifficultyBoundDivisor)
+	x.Mul(y, x)
+	x.Add(parent.Difficulty, x)
+
+	// minimum difficulty can ever be (before exponential factor)
+	if x.Cmp(params.MinimumDifficulty) < 0 {
+		x.Set(params.MinimumDifficulty)
+	}
+
+	return x
+}
 
 // Exported for fuzzing
 var BaseDifficultyCalulator = calcDifficulty
@@ -446,7 +494,7 @@ var BaseDifficultyCalulator = calcDifficulty
 // verifySeal checks whether a block satisfies the PoW difficulty requirements,
 // either using the usual inihash cache for it, or alternatively using a full DAG
 // to make remote mining fast.
-func (inihash *Inihash) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, fulldag bool) error {
+func (inihash *Inihash) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, fulldag bool, bigUtil types.BigInt) error {
 	// If we're running a fake PoW, accept any seal as valid
 	if inihash.config.PowMode == ModeFake || inihash.config.PowMode == ModeFullFake {
 		time.Sleep(inihash.fakeDelay)
@@ -457,7 +505,7 @@ func (inihash *Inihash) verifySeal(chain consensus.ChainHeaderReader, header *ty
 	}
 	// If we're running a shared PoW, delegate verification to it
 	if inihash.shared != nil {
-		return inihash.shared.verifySeal(chain, header, fulldag)
+		return inihash.shared.verifySeal(chain, header, fulldag, bigUtil)
 	}
 	// Ensure that we have a valid difficulty for the block
 	if header.Difficulty.Sign() <= 0 {
@@ -476,7 +524,7 @@ func (inihash *Inihash) verifySeal(chain consensus.ChainHeaderReader, header *ty
 
 	target := new(big.Int).Div(two256, header.Difficulty)
 
-	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
+	if bigUtil.SetBytes(result).Cmp(target) > 0 {
 		return errInvalidPoW
 	}
 	return nil
@@ -492,32 +540,165 @@ func (inihash *Inihash) Prepare(chain consensus.ChainHeaderReader, header *types
 	//todo set real address
 	header.TeamAddress = common.Address{}
 	header.TeamRate = 0
-	header.Difficulty = inihash.CalcDifficulty(chain, header.Time, parent)
+	header.Difficulty = CalcDifficulty(chain.Config(), header.Time, parent)
 	return nil
 }
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state on the header
-func (inihash *Inihash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header,
-	receipts *[]*types.Receipt, _ *[]*types.Transaction, _ *uint64, _ bool) (err error) {
+func (inihash *Inihash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state vm.StateDB, txs *[]*types.Transaction,
+	uncles []*types.Header, _ []*types.Withdrawal, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, tracer *tracing.Hooks) error {
 	// Accumulate any block and uncle rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header, uncles)
+
+	bigUtil := common.NewBig.Copy()
+
+	if chain.Config().IsNewTon(big.NewInt(0).Sub(header.Number, common.Big3)) {
+
+		abi := systemcontract.GetInteractiveABI()[systemcontract.AddressListContractName]
+		data, err := abi.Pack(systemcontract.ValidMethod, header.Coinbase)
+
+		if err != nil {
+			log.Error("Can't pack data ", "method", systemcontract.ValidMethod, "err", err)
+
+		} else {
+			msg := core.NewMessage(systemcontract.AddressListContractAddr, &systemcontract.AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+
+			result, err := vmcaller.ExecuteMsg(msg, state, header, newMinimalChainContext(inihash), inihash.chainConfig)
+			if err != nil {
+
+			} else {
+				ret, err := abi.Unpack(systemcontract.ValidMethod, result)
+				if err != nil {
+					return err
+				}
+				if len(ret) != 1 {
+					return errors.New("invalid params length")
+				}
+				bigUtil.SetUint64(ret[0].(*big.Int).Uint64())
+			}
+		}
+
+	}
+	if err := inihash.verifySeal(chain, header, false, bigUtil); err != nil {
+		return err
+	}
+
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	return
+	return nil
 }
 
 // FinalizeAndAssemble implements consensus.Engine, accumulating the block and
 // uncle rewards, setting the final state and assembling the block.
 func (inihash *Inihash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
-	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
+	body *types.Body, receipts []*types.Receipt, tracer *tracing.Hooks) (*types.Block, []*types.Receipt, error) {
 
-	inihash.Finalize(chain, header, state, &txs, uncles, nil, nil, nil, false)
+	if body.Transactions == nil {
+		body.Transactions = make([]*types.Transaction, 0)
+	}
+	if receipts == nil {
+		receipts = make([]*types.Receipt, 0)
+	}
+	accumulateRewards(chain.Config(), state, header, make([]*types.Header, 0))
+
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, uncles, receipts, trie.NewStackTrie(nil)), receipts, nil
+	return types.NewBlock(header, body, receipts, trie.NewStackTrie(nil)), receipts, nil
 }
 
-func (inihash *Inihash) Delay(_ consensus.ChainReader, _ *types.Header) *time.Duration {
+func (inihash *Inihash) ValidateTx(tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
+	if header.Number.Int64() > 10 && inihash.chainConfig.IsNewTon(big.NewInt(0).Sub(header.Number, common.Big3)) {
+		signer := types.MakeSigner(inihash.chainConfig, new(big.Int).SetUint64(header.Number.Uint64()), header.Time)
+		from, err := types.Sender(signer, tx)
+		if err != nil {
+			return err
+		}
+		m, err := inihash.getBlacklist(header, parentState)
+		if err != nil {
+			log.Error("can't get blacklist", "err", err)
+			return err
+		}
+		if d, exist := m[from]; exist && (d != DirectionTo) {
+			return errors.New("address denied")
+		}
+		if to := tx.To(); to != nil {
+			if d, exist := m[*to]; exist && (d != DirectionFrom) {
+				return errors.New("address denied")
+			}
+		}
+	}
+	return nil
+}
+
+func (inihash *Inihash) getBlacklist(header *types.Header, parentState *state.StateDB) (map[common.Address]blacklistDirection, error) {
+
+	if v, ok := inihash.blacklists.Get(header.ParentHash); ok {
+		return v.(map[common.Address]blacklistDirection), nil
+	}
+
+	inihash.blLock.Lock()
+	defer inihash.blLock.Unlock()
+	if v, ok := inihash.blacklists.Get(header.ParentHash); ok {
+		return v.(map[common.Address]blacklistDirection), nil
+	}
+
+	abi := systemcontract.GetInteractiveABI()[systemcontract.AddressListContractName]
+	get := func(method string) ([]common.Address, error) {
+		data, err := abi.Pack(method)
+		if err != nil {
+			log.Error("Can't pack data ", "method", method, "err", err)
+			return []common.Address{}, err
+		}
+
+		msg := core.NewMessage(header.Coinbase, &systemcontract.AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+
+		// Note: It's safe to use minimalChainContext for executing AddressListContract
+		result, err := vmcaller.ExecuteMsg(msg, parentState, header, newMinimalChainContext(inihash), inihash.chainConfig)
+		if err != nil {
+			return []common.Address{}, err
+		}
+
+		// unpack data
+		ret, err := abi.Unpack(method, result)
+		if err != nil {
+			return []common.Address{}, err
+		}
+		if len(ret) != 1 {
+			return []common.Address{}, errors.New("invalid params length")
+		}
+		blacks, ok := ret[0].([]common.Address)
+		if !ok {
+			return []common.Address{}, errors.New("invalid blacklist format")
+		}
+		return blacks, nil
+	}
+	froms, err := get("getBlacksFrom")
+	if err != nil {
+		return nil, err
+	}
+	tos, err := get("getBlacksTo")
+
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[common.Address]blacklistDirection)
+	for _, from := range froms {
+		m[from] = DirectionFrom
+	}
+	for _, to := range tos {
+		if _, exist := m[to]; exist {
+			m[to] = DirectionBoth
+		} else {
+			m[to] = DirectionTo
+		}
+	}
+	inihash.blacklists.Add(header.ParentHash, m)
+	return m, nil
+}
+
+func (inihash *Inihash) Delay(_ consensus.ChainReader, _ *types.Header, leftOver *time.Duration) *time.Duration {
 	return nil
 }
 
@@ -558,11 +739,11 @@ var (
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+func accumulateRewards(config *params.ChainConfig, state vm.StateDB, header *types.Header, uncles []*types.Header) {
 	// Skip block reward in catalyst mode
-	if config.IsCatalyst(header.Number) {
-		return
-	}
+	//if config.IsCatalyst(header.Number) {
+	//	return
+	//}
 	// Select the correct block reward based on chain progression
 	var blockReward *big.Int
 	if config.ChainID.Int64() == 7233 {
@@ -582,7 +763,7 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		r.Sub(r, header.Number)
 		r.Mul(r, blockReward)
 		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
+		state.AddBalance(uncle.Coinbase, uint256.MustFromBig(r), tracing.BalanceIncreaseRewardMineUncle)
 
 		r.Div(blockReward, big32)
 		reward.Add(reward, r)
@@ -590,6 +771,6 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	PersonalReward := reward
 	//TeamReward := big.NewInt(0).Div(big.NewInt(0).Mul(reward, big1), big10)
 
-	state.AddBalance(header.Coinbase, PersonalReward)
+	state.AddBalance(header.Coinbase, uint256.MustFromBig(PersonalReward), tracing.BalanceIncreaseRewardMineBlock)
 	//state.AddBalance(header.TeamAddress, TeamReward)
 }

@@ -17,16 +17,13 @@
 package parlia
 
 import (
-	"fmt"
-
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
 	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/rpc"
 )
 
-// API is a user facing RPC API to allow controlling the validator and voting
-// mechanisms of the proof-of-authority scheme.
+// API is a user facing RPC API to allow query snapshot and validators
 type API struct {
 	chain  consensus.ChainHeaderReader
 	parlia *Parlia
@@ -34,13 +31,7 @@ type API struct {
 
 // GetSnapshot retrieves the state snapshot at a given block.
 func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
+	header := api.getHeader(number)
 	// Ensure we have an actually valid block and return its snapshot
 	if header == nil {
 		return nil, errUnknownBlock
@@ -59,13 +50,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 
 // GetValidators retrieves the list of validators at the specified block.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
+	header := api.getHeader(number)
 	// Ensure we have an actually valid block and return the validators from its snapshot
 	if header == nil {
 		return nil, errUnknownBlock
@@ -77,7 +62,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	return snap.validators(), nil
 }
 
-// GetValidatorsAtHash retrieves the list of authorized validators at the specified block.
+// GetValidatorsAtHash retrieves the list of validators at the specified block.
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
@@ -90,58 +75,64 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 	return snap.validators(), nil
 }
 
-type status struct {
-	InturnPercent float64                `json:"inturnPercent"`
-	SigningStatus map[common.Address]int `json:"sealerActivity"`
-	NumBlocks     uint64                 `json:"numBlocks"`
+func (api *API) GetJustifiedNumber(number *rpc.BlockNumber) (uint64, error) {
+	header := api.getHeader(number)
+	// Ensure we have an actually valid block and return the validators from its snapshot
+	if header == nil {
+		return 0, errUnknownBlock
+	}
+	snap, err := api.parlia.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	if err != nil || snap.Attestation == nil {
+		return 0, err
+	}
+	return snap.Attestation.TargetNumber, nil
 }
 
-// Status returns the status of the last N blocks,
-// - the number of active validators,
-// - the number of validators,
-// - the percentage of in-turn blocks
-func (api *API) Status() (*status, error) {
-	var (
-		numBlocks = uint64(64)
-		header    = api.chain.CurrentHeader()
-		diff      = uint64(0)
-		optimals  = 0
-	)
+func (api *API) GetTurnLength(number *rpc.BlockNumber) (uint8, error) {
+	header := api.getHeader(number)
+	// Ensure we have an actually valid block and return the validators from its snapshot
+	if header == nil {
+		return 0, errUnknownBlock
+	}
 	snap, err := api.parlia.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
-	if err != nil {
-		return nil, err
+	if err != nil || snap.TurnLength == 0 {
+		return 0, err
 	}
-	var (
-		validators = snap.validators()
-		end        = header.Number.Uint64()
-		start      = end - numBlocks
-	)
-	if numBlocks > end {
-		start = 1
-		numBlocks = end - start
+	return snap.TurnLength, nil
+}
+
+func (api *API) GetFinalizedNumber(number *rpc.BlockNumber) (uint64, error) {
+	header := api.getHeader(number)
+	// Ensure we have an actually valid block and return the validators from its snapshot
+	if header == nil {
+		return 0, errUnknownBlock
 	}
-	signStatus := make(map[common.Address]int)
-	for _, s := range validators {
-		signStatus[s] = 0
+	snap, err := api.parlia.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	if err != nil || snap.Attestation == nil {
+		return 0, err
 	}
-	for n := start; n < end; n++ {
-		h := api.chain.GetHeaderByNumber(n)
-		if h == nil {
-			return nil, fmt.Errorf("missing block %d", n)
-		}
-		if h.Difficulty.Cmp(diffInTurn) == 0 {
-			optimals++
-		}
-		diff += h.Difficulty.Uint64()
-		sealer, err := api.parlia.Author(h)
+	return snap.Attestation.SourceNumber, nil
+}
+
+func (api *API) getHeader(number *rpc.BlockNumber) (header *types.Header) {
+	currentHeader := api.chain.CurrentHeader()
+
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = currentHeader // current if none requested
+	} else if *number == rpc.SafeBlockNumber {
+		justifiedNumber, _, err := api.parlia.GetJustifiedNumberAndHash(api.chain, []*types.Header{currentHeader})
 		if err != nil {
-			return nil, err
+			return nil
 		}
-		signStatus[sealer]++
+		header = api.chain.GetHeaderByNumber(justifiedNumber)
+	} else if *number == rpc.FinalizedBlockNumber {
+		header = api.parlia.GetFinalizedHeader(api.chain, currentHeader)
+	} else if *number == rpc.PendingBlockNumber {
+		return nil // no pending blocks on bsc
+	} else if *number == rpc.EarliestBlockNumber {
+		header = api.chain.GetHeaderByNumber(0)
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
-	return &status{
-		InturnPercent: float64(100*optimals) / float64(numBlocks),
-		SigningStatus: signStatus,
-		NumBlocks:     numBlocks,
-	}, nil
+	return
 }

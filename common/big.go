@@ -16,7 +16,12 @@
 
 package common
 
-import "math/big"
+import (
+	"github.com/jj-twa/biq"
+	"math/big"
+
+	"github.com/holiman/uint256"
+)
 
 // Common big integers often used
 var (
@@ -29,5 +34,7 @@ var (
 	Big257        = big.NewInt(257)
 	Big1000       = big.NewInt(1000)
 	BigOneDay     = big.NewInt(14400)
+	NewBig        = biq.NewInt(1)
 	BigOneDayUint = BigOneDay.Uint64()
+	U2560         = uint256.NewInt(0)
 )

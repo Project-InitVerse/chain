@@ -17,40 +17,39 @@
 package state
 
 import (
-	"bytes"
-
 	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/core/types"
 	"github.com/Project-InitVerse/chain/ethdb"
 	"github.com/Project-InitVerse/chain/rlp"
 	"github.com/Project-InitVerse/chain/trie"
 )
 
-// NewStateSync create a new state trie download scheduler.
-func NewStateSync(root common.Hash, database ethdb.KeyValueReader, bloom *trie.SyncBloom, onLeaf func(paths [][]byte, leaf []byte) error) *trie.Sync {
+// NewStateSync creates a new state trie download scheduler.
+func NewStateSync(root common.Hash, database ethdb.Database, onLeaf func(keys [][]byte, leaf []byte) error, scheme string) *trie.Sync {
 	// Register the storage slot callback if the external callback is specified.
-	var onSlot func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash) error
+	var onSlot func(keys [][]byte, path []byte, leaf []byte, parent common.Hash, parentPath []byte) error
 	if onLeaf != nil {
-		onSlot = func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash) error {
-			return onLeaf(paths, leaf)
+		onSlot = func(keys [][]byte, path []byte, leaf []byte, parent common.Hash, parentPath []byte) error {
+			return onLeaf(keys, leaf)
 		}
 	}
 	// Register the account callback to connect the state trie and the storage
 	// trie belongs to the contract.
 	var syncer *trie.Sync
-	onAccount := func(paths [][]byte, hexpath []byte, leaf []byte, parent common.Hash) error {
+	onAccount := func(keys [][]byte, path []byte, leaf []byte, parent common.Hash, parentPath []byte) error {
 		if onLeaf != nil {
-			if err := onLeaf(paths, leaf); err != nil {
+			if err := onLeaf(keys, leaf); err != nil {
 				return err
 			}
 		}
-		var obj Account
-		if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
+		var obj types.StateAccount
+		if err := rlp.DecodeBytes(leaf, &obj); err != nil {
 			return err
 		}
-		syncer.AddSubTrie(obj.Root, hexpath, parent, onSlot)
-		syncer.AddCodeEntry(common.BytesToHash(obj.CodeHash), hexpath, parent)
+		syncer.AddSubTrie(obj.Root, path, parent, parentPath, onSlot)
+		syncer.AddCodeEntry(common.BytesToHash(obj.CodeHash), path, parent, parentPath)
 		return nil
 	}
-	syncer = trie.NewSync(root, database, onAccount, bloom)
+	syncer = trie.NewSync(root, database, onAccount, scheme)
 	return syncer
 }

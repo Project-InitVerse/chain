@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sort"
+	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/Project-InitVerse/chain/common/gopool"
 	"github.com/Project-InitVerse/chain/common/mclock"
 	"github.com/Project-InitVerse/chain/event"
 	"github.com/Project-InitVerse/chain/log"
@@ -47,6 +47,8 @@ const (
 	snappyProtocolVersion = 5
 
 	pingInterval = 15 * time.Second
+
+	slowPeerLatencyThreshold = 500
 )
 
 const (
@@ -113,18 +115,55 @@ type Peer struct {
 	wg       sync.WaitGroup
 	protoErr chan error
 	closed   chan struct{}
+	pingRecv chan struct{}
+	pongRecv chan struct{}
 	disc     chan DiscReason
 
 	// events receives message send / receive events if set
-	events *event.Feed
+	events         *event.Feed
+	testPipe       *MsgPipeRW // for testing
+	testRemoteAddr string     // for testing
+
+	latency atomic.Int64 // mill second latency, estimated by ping msg
+
+	// it indicates the peer is in the validator network, it will directly broadcast when miner/sentry broadcast mined block,
+	// and won't broadcast any txs between EVN peers.
+	EVNPeerFlag atomic.Bool
 }
 
 // NewPeer returns a peer for testing purposes.
 func NewPeer(id enode.ID, name string, caps []Cap) *Peer {
+	// Generate a fake set of local protocols to match as running caps. Almost
+	// no fields needs to be meaningful here as we're only using it to cross-
+	// check with the "remote" caps array.
+	protos := make([]Protocol, len(caps))
+	for i, cap := range caps {
+		protos[i].Name = cap.Name
+		protos[i].Version = cap.Version
+	}
 	pipe, _ := net.Pipe()
 	node := enode.SignNull(new(enr.Record), id)
 	conn := &conn{fd: pipe, transport: nil, node: node, caps: caps, name: name}
-	peer := newPeer(log.Root(), conn, nil)
+	peer := newPeer(log.Root(), conn, protos)
+	close(peer.closed) // ensures Disconnect doesn't block
+	return peer
+}
+
+// NewPeerPipe creates a peer for testing purposes.
+// The message pipe given as the last parameter is closed when
+// Disconnect is called on the peer.
+func NewPeerPipe(id enode.ID, name string, caps []Cap, pipe *MsgPipeRW) *Peer {
+	p := NewPeer(id, name, caps)
+	p.testPipe = pipe
+	return p
+}
+
+// NewPeerWithProtocols returns a peer for testing purposes.
+func NewPeerWithProtocols(id enode.ID, protocols []Protocol, name string, caps []Cap) *Peer {
+	pipe, _ := net.Pipe()
+	node := enode.SignNull(new(enr.Record), id)
+	conn := &conn{fd: pipe, transport: nil, node: node, caps: caps, name: name}
+	peer := newPeer(log.Root(), conn, protocols)
 	close(peer.closed) // ensures Disconnect doesn't block
 	return peer
 }
@@ -175,7 +214,24 @@ func (p *Peer) RunningCap(protocol string, versions []uint) bool {
 
 // RemoteAddr returns the remote address of the network connection.
 func (p *Peer) RemoteAddr() net.Addr {
+	if len(p.testRemoteAddr) > 0 {
+		if addr, err := net.ResolveTCPAddr("tcp", p.testRemoteAddr); err == nil {
+			return addr
+		}
+		log.Warn("RemoteAddr", "invalid testRemoteAddr", p.testRemoteAddr)
+	}
+	if p.rw == nil {
+		return nil
+	}
 	return p.rw.fd.RemoteAddr()
+}
+
+func (p *Peer) UpdateTestRemoteAddr(addr string) { // test purpose only
+	p.testRemoteAddr = addr
+}
+
+func (p *Peer) UpdateTrustFlagTest() { // test purpose only
+	p.rw.set(trustedConn, true)
 }
 
 // LocalAddr returns the local address of the network connection.
@@ -186,6 +242,10 @@ func (p *Peer) LocalAddr() net.Addr {
 // Disconnect terminates the peer connection with the given reason.
 // It returns immediately and does not wait until the connection is closed.
 func (p *Peer) Disconnect(reason DiscReason) {
+	if p.testPipe != nil {
+		p.testPipe.Close()
+	}
+
 	select {
 	case p.disc <- reason:
 	case <-p.closed:
@@ -203,6 +263,11 @@ func (p *Peer) Inbound() bool {
 	return p.rw.is(inboundConn)
 }
 
+// VerifyNode returns true if the peer is a verification connection
+func (p *Peer) VerifyNode() bool {
+	return p.rw.is(verifyConn)
+}
+
 func newPeer(log log.Logger, conn *conn, protocols []Protocol) *Peer {
 	protomap := matchProtocols(protocols, conn.caps, conn)
 	p := &Peer{
@@ -212,6 +277,8 @@ func newPeer(log log.Logger, conn *conn, protocols []Protocol) *Peer {
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, len(protomap)+1), // protocols + pingLoop
 		closed:   make(chan struct{}),
+		pingRecv: make(chan struct{}, 16),
+		pongRecv: make(chan struct{}, 16),
 		log:      log.New("id", conn.node.ID(), "conn", conn.flags),
 	}
 	return p
@@ -272,17 +339,35 @@ loop:
 }
 
 func (p *Peer) pingLoop() {
-	ping := time.NewTimer(pingInterval)
 	defer p.wg.Done()
+
+	ping := time.NewTimer(pingInterval)
 	defer ping.Stop()
+
+	var startPing atomic.Int64
 	for {
 		select {
 		case <-ping.C:
+			startPing.Store(time.Now().UnixMilli())
 			if err := SendItems(p.rw, pingMsg); err != nil {
 				p.protoErr <- err
 				return
 			}
 			ping.Reset(pingInterval)
+
+		case <-p.pingRecv:
+			SendItems(p.rw, pongMsg)
+
+		case <-p.pongRecv:
+			// estimate latency here, it also includes tiny msg encode/decode, io wait time
+			latency := (time.Now().UnixMilli() - startPing.Load()) / 2
+			if latency > 0 {
+				p.latency.Store(latency)
+				peerLatencyStat.Update(time.Duration(latency))
+				if latency > slowPeerLatencyThreshold {
+					log.Warn("find a too slow peer", "id", p.ID(), "peer", p.RemoteAddr(), "latency", latency)
+				}
+			}
 		case <-p.closed:
 			return
 		}
@@ -309,15 +394,20 @@ func (p *Peer) handle(msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
-		gopool.Submit(func() {
-			SendItems(p.rw, pongMsg)
-		})
+		select {
+		case p.pingRecv <- struct{}{}:
+		case <-p.closed:
+		}
+	case msg.Code == pongMsg:
+		msg.Discard()
+		select {
+		case p.pongRecv <- struct{}{}:
+		case <-p.closed:
+		}
 	case msg.Code == discMsg:
-		var reason [1]DiscReason
 		// This is the last message. We don't need to discard or
 		// check errors because, the connection will be closed after it.
-		rlp.Decode(msg.Payload, &reason)
-		return reason[0]
+		return decodeDisconnectMessage(msg.Payload)
 	case msg.Code < baseProtocolLength:
 		// ignore other base protocol messages
 		return msg.Discard()
@@ -327,7 +417,7 @@ func (p *Peer) handle(msg Msg) error {
 		if err != nil {
 			return fmt.Errorf("msg code out of range: %v", msg.Code)
 		}
-		if metrics.Enabled {
+		if metrics.Enabled() {
 			m := fmt.Sprintf("%s/%s/%d/%#02x", ingressMeterName, proto.Name, proto.Version, msg.Code-proto.offset)
 			metrics.GetOrRegisterMeter(m, nil).Mark(int64(msg.meterSize))
 			metrics.GetOrRegisterMeter(m+"/packets", nil).Mark(1)
@@ -340,6 +430,27 @@ func (p *Peer) handle(msg Msg) error {
 		}
 	}
 	return nil
+}
+
+// decodeDisconnectMessage decodes the payload of discMsg.
+func decodeDisconnectMessage(r io.Reader) (reason DiscReason) {
+	s := rlp.NewStream(r, 100)
+	k, _, err := s.Kind()
+	if err != nil {
+		return DiscInvalid
+	}
+	if k == rlp.List {
+		s.List()
+		err = s.Decode(&reason)
+	} else {
+		// Legacy path: some implementations, including geth, used to send the disconnect
+		// reason as a byte array by accident.
+		err = s.Decode(&reason)
+	}
+	if err != nil {
+		reason = DiscInvalid
+	}
+	return reason
 }
 
 func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
@@ -356,7 +467,7 @@ func countMatchingProtocols(protocols []Protocol, caps []Cap) int {
 
 // matchProtocols creates structures for matching named subprotocols.
 func matchProtocols(protocols []Protocol, caps []Cap, rw MsgReadWriter) map[string]*protoRW {
-	sort.Sort(capsByNameAndVersion(caps))
+	slices.SortFunc(caps, Cap.Cmp)
 	offset := baseProtocolLength
 	result := make(map[string]*protoRW)
 
@@ -382,7 +493,6 @@ outer:
 func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
 	p.wg.Add(len(p.running))
 	for _, proto := range p.running {
-		proto := proto
 		proto.closed = p.closed
 		proto.wstart = writeStart
 		proto.werr = writeErr
@@ -475,7 +585,9 @@ type PeerInfo struct {
 		Trusted       bool   `json:"trusted"`
 		Static        bool   `json:"static"`
 	} `json:"network"`
-	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
+	Protocols   map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
+	Latency     int64                  `json:"latency"`   // the estimate latency from ping msg
+	EVNPeerFlag bool                   `json:"evnPeerFlag"`
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -487,11 +599,13 @@ func (p *Peer) Info() *PeerInfo {
 	}
 	// Assemble the generic peer metadata
 	info := &PeerInfo{
-		Enode:     p.Node().URLv4(),
-		ID:        p.ID().String(),
-		Name:      p.Fullname(),
-		Caps:      caps,
-		Protocols: make(map[string]interface{}),
+		Enode:       p.Node().URLv4(),
+		ID:          p.ID().String(),
+		Name:        p.Fullname(),
+		Caps:        caps,
+		Protocols:   make(map[string]interface{}, len(p.running)),
+		Latency:     p.latency.Load(),
+		EVNPeerFlag: p.EVNPeerFlag.Load(),
 	}
 	if p.Node().Seq() > 0 {
 		info.ENR = p.Node().String()

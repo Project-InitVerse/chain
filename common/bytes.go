@@ -19,6 +19,9 @@ package common
 
 import (
 	"encoding/hex"
+	"errors"
+
+	"github.com/Project-InitVerse/chain/common/hexutil"
 )
 
 // FromHex returns the bytes represented by the hexadecimal string s.
@@ -47,11 +50,6 @@ func CopyBytes(b []byte) (copiedBytes []byte) {
 // has0xPrefix validates str begins with '0x' or '0X'.
 func has0xPrefix(str string) bool {
 	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
-}
-
-// has0xPrefix validates str begins with '0x' or '0X'.
-func hasI4Prefix(str string) bool {
-	return len(str) >= 2 && str[0] == 'I' && (str[1] == '4')
 }
 
 // isHexCharacter returns bool of c being a valid hexadecimal.
@@ -95,6 +93,15 @@ func Hex2BytesFixed(str string, flen int) []byte {
 	hh := make([]byte, flen)
 	copy(hh[flen-len(h):flen], h)
 	return hh
+}
+
+// ParseHexOrString tries to hexdecode b, but if the prefix is missing, it instead just returns the raw bytes
+func ParseHexOrString(str string) ([]byte, error) {
+	b, err := hexutil.Decode(str)
+	if errors.Is(err, hexutil.ErrMissingPrefix) {
+		return []byte(str), nil
+	}
+	return b, err
 }
 
 // RightPadBytes zero-pads slice to the right up to length l.

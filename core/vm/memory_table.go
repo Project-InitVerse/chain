@@ -16,7 +16,7 @@
 
 package vm
 
-func memorySha3(stack *Stack) (uint64, bool) {
+func memoryKeccak256(stack *Stack) (uint64, bool) {
 	return calcMemSize64(stack.Back(0), stack.Back(1))
 }
 
@@ -48,6 +48,14 @@ func memoryMStore(stack *Stack) (uint64, bool) {
 	return calcMemSize64WithUint(stack.Back(0), 32)
 }
 
+func memoryMcopy(stack *Stack) (uint64, bool) {
+	mStart := stack.Back(0) // stack[0]: dest
+	if stack.Back(1).Gt(mStart) {
+		mStart = stack.Back(1) // stack[1]: source
+	}
+	return calcMemSize64(mStart, stack.Back(2)) // stack[2]: length
+}
+
 func memoryCreate(stack *Stack) (uint64, bool) {
 	return calcMemSize64(stack.Back(1), stack.Back(2))
 }
@@ -65,11 +73,9 @@ func memoryCall(stack *Stack) (uint64, bool) {
 	if overflow {
 		return 0, true
 	}
-	if x > y {
-		return x, false
-	}
-	return y, false
+	return max(x, y), false
 }
+
 func memoryDelegateCall(stack *Stack) (uint64, bool) {
 	x, overflow := calcMemSize64(stack.Back(4), stack.Back(5))
 	if overflow {
@@ -79,10 +85,7 @@ func memoryDelegateCall(stack *Stack) (uint64, bool) {
 	if overflow {
 		return 0, true
 	}
-	if x > y {
-		return x, false
-	}
-	return y, false
+	return max(x, y), false
 }
 
 func memoryStaticCall(stack *Stack) (uint64, bool) {
@@ -94,10 +97,7 @@ func memoryStaticCall(stack *Stack) (uint64, bool) {
 	if overflow {
 		return 0, true
 	}
-	if x > y {
-		return x, false
-	}
-	return y, false
+	return max(x, y), false
 }
 
 func memoryReturn(stack *Stack) (uint64, bool) {
@@ -109,5 +109,21 @@ func memoryRevert(stack *Stack) (uint64, bool) {
 }
 
 func memoryLog(stack *Stack) (uint64, bool) {
+	return calcMemSize64(stack.Back(0), stack.Back(1))
+}
+
+func memoryExtCall(stack *Stack) (uint64, bool) {
+	return calcMemSize64(stack.Back(1), stack.Back(2))
+}
+
+func memoryDataCopy(stack *Stack) (uint64, bool) {
+	return calcMemSize64(stack.Back(0), stack.Back(2))
+}
+
+func memoryEOFCreate(stack *Stack) (uint64, bool) {
+	return calcMemSize64(stack.Back(2), stack.Back(3))
+}
+
+func memoryReturnContract(stack *Stack) (uint64, bool) {
 	return calcMemSize64(stack.Back(0), stack.Back(1))
 }

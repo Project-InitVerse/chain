@@ -14,18 +14,7 @@ import (
 	"testing"
 )
 
-func fromHex(s string) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 func TestHashes(t *testing.T) {
-	emptyData := make([]byte, 40)
-	has := Sum256(emptyData)
-	fmt.Println(hex.EncodeToString(has[:]))
 	defer func(sse4, avx, avx2 bool) {
 		useSSE4, useAVX, useAVX2 = sse4, avx, avx2
 	}(useSSE4, useAVX, useAVX2)

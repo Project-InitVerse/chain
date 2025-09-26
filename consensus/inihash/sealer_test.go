@@ -18,6 +18,7 @@ package inihash
 
 import (
 	"encoding/json"
+	"github.com/Project-InitVerse/chain/params"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -94,11 +95,11 @@ func TestRemoteNotifyFull(t *testing.T) {
 
 	// Create the custom inihash engine.
 	config := Config{
-		PowMode:    ModeTest,
-		NotifyFull: true,
-		Log:        testlog.Logger(t, log.LvlWarn),
+		PowMode: ModeTest,
+		Log:     testlog.Logger(t, log.LevelWarn),
 	}
-	ethash := New(config, []string{server.URL}, false, nil)
+	chainConfig := params.ChainConfig{}
+	ethash := New(&chainConfig, config, []string{server.URL}, false, nil)
 	defer ethash.Close()
 
 	// Stream a work task and ensure the notification bubbles out.
@@ -139,7 +140,7 @@ func TestRemoteMultiNotify(t *testing.T) {
 
 	// Create the custom inihash engine.
 	ethash := NewTester([]string{server.URL}, false)
-	ethash.config.Log = testlog.Logger(t, log.LvlWarn)
+	ethash.config.Log = testlog.Logger(t, log.LevelWarn)
 	defer ethash.Close()
 
 	// Provide a results reader.
@@ -184,11 +185,11 @@ func TestRemoteMultiNotifyFull(t *testing.T) {
 
 	// Create the custom inihash engine.
 	config := Config{
-		PowMode:    ModeTest,
-		NotifyFull: true,
-		Log:        testlog.Logger(t, log.LvlWarn),
+		PowMode: ModeTest,
+		Log:     testlog.Logger(t, log.LevelWarn),
 	}
-	ethash := New(config, []string{server.URL}, false, nil)
+	chainConfig := params.ChainConfig{}
+	ethash := New(&chainConfig, config, []string{server.URL}, false, nil)
 	defer ethash.Close()
 
 	// Provide a results reader.

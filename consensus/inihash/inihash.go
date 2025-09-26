@@ -19,18 +19,19 @@ package inihash
 
 import (
 	"errors"
+	"github.com/Project-InitVerse/chain/common"
+	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/log"
+	"github.com/Project-InitVerse/chain/metrics"
 	"github.com/Project-InitVerse/chain/params"
+	"github.com/Project-InitVerse/chain/rpc"
+	lru "github.com/hashicorp/golang-lru"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 	"unsafe"
-
-	"github.com/Project-InitVerse/chain/consensus"
-	"github.com/Project-InitVerse/chain/log"
-	"github.com/Project-InitVerse/chain/metrics"
-	"github.com/Project-InitVerse/chain/rpc"
-	"github.com/hashicorp/golang-lru/simplelru"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")
@@ -55,7 +56,8 @@ func init() {
 		CachesInMem:   3,
 		DatasetsInMem: 1,
 	}
-	sharedEthash = New(sharedConfig, nil, false, nil)
+	chainConfig := params.ChainConfig{}
+	sharedEthash = New(&chainConfig, sharedConfig, nil, false, nil)
 }
 
 // isLittleEndian returns whether the local system is running in little or big
@@ -65,57 +67,58 @@ func isLittleEndian() bool {
 	return *(*byte)(unsafe.Pointer(&n)) == 0x04
 }
 
-// lru tracks caches or datasets by their last use time, keeping at most N of them.
-type lru struct {
-	what string
-	new  func(epoch uint64) interface{}
-	mu   sync.Mutex
-	// Items are kept in a LRU cache, but there is a special case:
-	// We always keep an item for (highest seen epoch) + 1 as the 'future item'.
-	cache      *simplelru.LRU
-	future     uint64
-	futureItem interface{}
-}
-
-// newlru create a new least-recently-used cache for either the verification caches
-// or the mining datasets.
-func newlru(what string, maxItems int, new func(epoch uint64) interface{}) *lru {
-	if maxItems <= 0 {
-		maxItems = 1
-	}
-	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
-		log.Trace("Evicted inihash "+what, "epoch", key)
-	})
-	return &lru{what: what, new: new, cache: cache}
-}
-
-// get retrieves or creates an item for the given epoch. The first return value is always
-// non-nil. The second return value is non-nil if lru thinks that an item will be useful in
-// the near future.
-func (lru *lru) get(epoch uint64) (item, future interface{}) {
-	lru.mu.Lock()
-	defer lru.mu.Unlock()
-
-	// Get or create the item for the requested epoch.
-	item, ok := lru.cache.Get(epoch)
-	if !ok {
-		if lru.future > 0 && lru.future == epoch {
-			item = lru.futureItem
-		} else {
-			log.Trace("Requiring new inihash "+lru.what, "epoch", epoch)
-			item = lru.new(epoch)
-		}
-		lru.cache.Add(epoch, item)
-	}
-	// Update the 'future item' if epoch is larger than previously seen.
-	if epoch < maxEpoch-1 && lru.future < epoch+1 {
-		log.Trace("Requiring new future inihash "+lru.what, "epoch", epoch+1)
-		future = lru.new(epoch + 1)
-		lru.future = epoch + 1
-		lru.futureItem = future
-	}
-	return item, future
-}
+//
+//// lru tracks caches or datasets by their last use time, keeping at most N of them.
+//type lru struct {
+//	what string
+//	new  func(epoch uint64) interface{}
+//	mu   sync.Mutex
+//	// Items are kept in a LRU cache, but there is a special case:
+//	// We always keep an item for (highest seen epoch) + 1 as the 'future item'.
+//	cache      *simplelru.LRU
+//	future     uint64
+//	futureItem interface{}
+//}
+//
+//// newlru create a new least-recently-used cache for either the verification caches
+//// or the mining datasets.
+//func newlru(what string, maxItems int, new func(epoch uint64) interface{}) *lru {
+//	if maxItems <= 0 {
+//		maxItems = 1
+//	}
+//	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
+//		log.Trace("Evicted inihash "+what, "epoch", key)
+//	})
+//	return &lru{what: what, new: new, cache: cache}
+//}
+//
+//// get retrieves or creates an item for the given epoch. The first return value is always
+//// non-nil. The second return value is non-nil if lru thinks that an item will be useful in
+//// the near future.
+//func (lru *lru) get(epoch uint64) (item, future interface{}) {
+//	lru.mu.Lock()
+//	defer lru.mu.Unlock()
+//
+//	// Get or create the item for the requested epoch.
+//	item, ok := lru.cache.Get(epoch)
+//	if !ok {
+//		if lru.future > 0 && lru.future == epoch {
+//			item = lru.futureItem
+//		} else {
+//			log.Trace("Requiring new inihash "+lru.what, "epoch", epoch)
+//			item = lru.new(epoch)
+//		}
+//		lru.cache.Add(epoch, item)
+//	}
+//	// Update the 'future item' if epoch is larger than previously seen.
+//	if epoch < maxEpoch-1 && lru.future < epoch+1 {
+//		log.Trace("Requiring new future inihash "+lru.what, "epoch", epoch+1)
+//		future = lru.new(epoch + 1)
+//		lru.future = epoch + 1
+//		lru.futureItem = future
+//	}
+//	return item, future
+//}
 
 // Mode defines the type and amount of PoW verification an inihash engine makes.
 type Mode uint
@@ -140,25 +143,38 @@ type Config struct {
 	DatasetsLockMmap bool
 	PowMode          Mode
 
-	// When set, notifications sent by the remote sealer will
-	// be block header JSON objects instead of work package arrays.
-	NotifyFull bool
+	//
+	//// When set, notifications sent by the remote sealer will
+	//// be block header JSON objects instead of work package arrays.
+	//NotifyFull bool
 
 	Log log.Logger `toml:"-"`
+}
+
+var DefaultIniConfig = Config{
+	CacheDir:         "inihash",
+	CachesInMem:      2,
+	CachesOnDisk:     3,
+	CachesLockMmap:   false,
+	DatasetsInMem:    1,
+	DatasetsOnDisk:   2,
+	DatasetsLockMmap: false,
 }
 
 // Inihash is a consensus engine based on proof-of-work implementing the inihash
 // algorithm.
 type Inihash struct {
-	config  Config
-	chainId *big.Int
+	chainConfig *params.ChainConfig
+	config      Config
+	chainId     *big.Int
 	// Mining related fields
-	rand     *rand.Rand    // Properly seeded random source for nonces
-	threads  int           // Number of threads to mine on if mining
-	update   chan struct{} // Notification channel to update mining parameters
-	hashrate metrics.Meter // Meter tracking the average hashrate
-	remote   *remoteSealer
-
+	rand       *rand.Rand    // Properly seeded random source for nonces
+	threads    int           // Number of threads to mine on if mining
+	update     chan struct{} // Notification channel to update mining parameters
+	hashrate   metrics.Meter // Meter tracking the average hashrate
+	remote     *remoteSealer
+	blacklists *lru.ARCCache // Blacklist snapshots for recent blocks to speed up transactions validation
+	blLock     sync.Mutex    // Make sure only get blacklist once for each block
 	// The fields below are hooks for testing
 	shared    *Inihash      // Shared PoW verifier to avoid cache regeneration
 	fakeFail  uint64        // Block number which fails PoW check even in fake mode
@@ -166,12 +182,15 @@ type Inihash struct {
 
 	lock      sync.Mutex // Ensures thread safety for the in-memory caches and mining fields
 	closeOnce sync.Once  // Ensures exit channel will not be closed twice.
+
 }
+
+const inmemoryBlacklist = 50
 
 // New creates a full sized inihash PoW scheme and starts a background thread for
 // remote mining, also optionally notifying a batch of remote services of new work
 // packages.
-func New(config Config, notify []string, noverify bool, chainId *big.Int) *Inihash {
+func New(chainConfig *params.ChainConfig, config Config, notify []string, noverify bool, chainId *big.Int) *Inihash {
 	if config.Log == nil {
 		config.Log = log.Root()
 	}
@@ -185,11 +204,14 @@ func New(config Config, notify []string, noverify bool, chainId *big.Int) *Iniha
 	//if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
 	//	config.Log.Info("Disk storage enabled for inihash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
 	//}
+	blacklists, _ := lru.NewARC(inmemoryBlacklist)
 	ethash := &Inihash{
-		config:   config,
-		update:   make(chan struct{}),
-		hashrate: metrics.NewMeterForced(),
-		chainId:  chainId,
+		chainConfig: chainConfig,
+		config:      config,
+		update:      make(chan struct{}),
+		hashrate:    *metrics.NewMeter(),
+		chainId:     chainId,
+		blacklists:  blacklists,
 	}
 	if config.PowMode == ModeShared {
 		ethash.shared = sharedEthash
@@ -201,7 +223,7 @@ func New(config Config, notify []string, noverify bool, chainId *big.Int) *Iniha
 // NewTester creates a small sized inihash PoW scheme useful only for testing
 // purposes.
 func NewTester(notify []string, noverify bool) *Inihash {
-	return New(Config{PowMode: ModeTest}, notify, noverify, nil)
+	return New(&params.ChainConfig{}, Config{PowMode: ModeTest}, notify, noverify, nil)
 }
 
 // NewFaker creates a inihash consensus engine with a fake PoW scheme that accepts
@@ -281,6 +303,15 @@ func (inihash *Inihash) Threads() int {
 	return inihash.threads
 }
 
+func (c *Inihash) VerifyRequests(header *types.Header, Requests [][]byte) error {
+	return nil
+}
+
+// NextInTurnValidator return the next in-turn validator for header
+func (c *Inihash) NextInTurnValidator(chain consensus.ChainHeaderReader, header *types.Header) (common.Address, error) {
+	return common.Address{}, errors.New("not implemented")
+}
+
 // SetThreads updates the number of mining threads currently enabled. Calling
 // this method does not start mining, only sets the thread count. If zero is
 // specified, the miner will use all cores of the machine. Setting a thread
@@ -310,7 +341,7 @@ func (inihash *Inihash) SetThreads(threads int) {
 func (inihash *Inihash) Hashrate() float64 {
 	// Short circuit if we are run the inihash in normal/test mode.
 	if inihash.config.PowMode != ModeNormal && inihash.config.PowMode != ModeTest {
-		return inihash.hashrate.Rate1()
+		return inihash.hashrate.Snapshot().Rate1()
 	}
 	var res = make(chan uint64, 1)
 
@@ -318,11 +349,11 @@ func (inihash *Inihash) Hashrate() float64 {
 	case inihash.remote.fetchRateCh <- res:
 	case <-inihash.remote.exitCh:
 		// Return local hashrate only if inihash is stopped.
-		return inihash.hashrate.Rate1()
+		return inihash.hashrate.Snapshot().Rate1()
 	}
 
 	// Gather total submitted hash rate of remote sealers.
-	return inihash.hashrate.Rate1() + float64(<-res)
+	return inihash.hashrate.Snapshot().Rate1() + float64(<-res)
 }
 
 func (Inihash *Inihash) GetBlockReward(blockHeight uint64) *big.Int {

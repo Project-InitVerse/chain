@@ -1,4 +1,4 @@
-// Copyright 2018 The go-ethereum Authors
+// Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -21,9 +21,10 @@ import (
 	"crypto/ecdsa"
 	"encoding/base32"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Project-InitVerse/chain/crypto"
@@ -133,16 +134,16 @@ UPD Payload length:
   - dns.txt.length 1
   - dns.txt resp_data_size
 
-So the total size is roughly a fixed overhead of `39`, and the size of the
-query (domain name) and response.
-The query size is, for example, FVY6INQ6LZ33WLCHO3BPR3FH6Y.snap.mainnet.ethdisco.net (52)
+So the total size is roughly a fixed overhead of `39`, and the size of the query (domain
+name) and response. The query size is, for example,
+FVY6INQ6LZ33WLCHO3BPR3FH6Y.snap.mainnet.ethdisco.net (52)
 
 We also have some static data in the response, such as `enrtree-branch:`, and potentially
 splitting the response up with `" "`, leaving us with a size of roughly `400` that we need
 to stay below.
 
-The number `370` is used to have some margin for extra overhead (for example, the dns query
-may be larger - more subdomains).
+The number `370` is used to have some margin for extra overhead (for example, the dns
+query may be larger - more subdomains).
 */
 const (
 	hashAbbrevSize = 1 + 16*13/8          // Size of an encoded hash (plus comma)
@@ -201,10 +202,7 @@ func (t *Tree) build(entries []entry) entry {
 	}
 	var subtrees []entry
 	for len(entries) > 0 {
-		n := maxChildren
-		if len(entries) < n {
-			n = len(entries)
-		}
+		n := min(len(entries), maxChildren)
 		sub := t.build(entries[:n])
 		entries = entries[n:]
 		subtrees = append(subtrees, sub)
@@ -214,8 +212,8 @@ func (t *Tree) build(entries []entry) entry {
 }
 
 func sortByID(nodes []*enode.Node) []*enode.Node {
-	sort.Slice(nodes, func(i, j int) bool {
-		return bytes.Compare(nodes[i].ID().Bytes(), nodes[j].ID().Bytes()) < 0
+	slices.SortFunc(nodes, func(a, b *enode.Node) int {
+		return bytes.Compare(a.ID().Bytes(), b.ID().Bytes())
 	})
 	return nodes
 }
@@ -341,14 +339,14 @@ func parseLinkEntry(e string) (entry, error) {
 
 func parseLink(e string) (*linkEntry, error) {
 	if !strings.HasPrefix(e, linkPrefix) {
-		return nil, fmt.Errorf("wrong/missing scheme 'enrtree' in URL")
+		return nil, errors.New("wrong/missing scheme 'enrtree' in URL")
 	}
 	e = e[len(linkPrefix):]
-	pos := strings.IndexByte(e, '@')
-	if pos == -1 {
+
+	keystring, domain, found := strings.Cut(e, "@")
+	if !found {
 		return nil, entryError{"link", errNoPubkey}
 	}
-	keystring, domain := e[:pos], e[pos+1:]
 	keybytes, err := b32format.DecodeString(keystring)
 	if err != nil {
 		return nil, entryError{"link", errBadPubkey}

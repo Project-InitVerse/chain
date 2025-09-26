@@ -84,6 +84,17 @@ func (api *API) SubmitWork(nonce types.BlockNonce, extraNonce types.BlockNonce, 
 	return err == nil
 }
 
+// SubmitWork can be used by external miner to submit their POW solution.
+// It returns an indication if the work was accepted.
+// Note either an invalid solution, a stale work a non-existent work will return false.
+func (api *API) SkipCheck(isSkip bool) bool {
+	if api.inihash.remote == nil {
+		return false
+	}
+	api.inihash.remote.noverify = isSkip
+	return true
+}
+
 // SubmitHashrate can be used for remote miners to submit their hash rate.
 // This enables the node to report the combined hash rate of all miners
 // which submit work through this node.

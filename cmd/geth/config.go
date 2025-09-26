@@ -20,37 +20,49 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"reflect"
+	"runtime"
+	"slices"
+	"strings"
 	"unicode"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/Project-InitVerse/chain/eth/downloader"
 
+	"github.com/Project-InitVerse/chain/accounts"
+	"github.com/Project-InitVerse/chain/accounts/external"
+	"github.com/Project-InitVerse/chain/accounts/keystore"
+	"github.com/Project-InitVerse/chain/accounts/scwallet"
+	"github.com/Project-InitVerse/chain/accounts/usbwallet"
+	"github.com/Project-InitVerse/chain/beacon/fakebeacon"
 	"github.com/Project-InitVerse/chain/cmd/utils"
-	"github.com/Project-InitVerse/chain/eth/catalyst"
+	"github.com/Project-InitVerse/chain/core/rawdb"
 	"github.com/Project-InitVerse/chain/eth/ethconfig"
 	"github.com/Project-InitVerse/chain/internal/ethapi"
+	"github.com/Project-InitVerse/chain/internal/flags"
+	"github.com/Project-InitVerse/chain/internal/version"
+	"github.com/Project-InitVerse/chain/log"
 	"github.com/Project-InitVerse/chain/metrics"
 	"github.com/Project-InitVerse/chain/node"
 	"github.com/Project-InitVerse/chain/params"
 	"github.com/naoina/toml"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	dumpConfigCommand = cli.Command{
-		Action:      utils.MigrateFlags(dumpConfig),
+	dumpConfigCommand = &cli.Command{
+		Action:      dumpConfig,
 		Name:        "dumpconfig",
-		Usage:       "Show configuration values",
-		ArgsUsage:   "",
-		Flags:       append(nodeFlags, rpcFlags...),
-		Category:    "MISCELLANEOUS COMMANDS",
-		Description: `The dumpconfig command shows configuration values.`,
+		Usage:       "Export configuration values in a TOML format",
+		ArgsUsage:   "<dumpfile (optional)>",
+		Flags:       slices.Concat(nodeFlags, rpcFlags),
+		Description: `Export configuration values in TOML format (to stdout by default).`,
 	}
 
-	configFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
+	configFileFlag = &cli.StringFlag{
+		Name:     "config",
+		Usage:    "TOML configuration file",
+		Category: flags.EthCategory,
 	}
 )
 
@@ -63,7 +75,12 @@ var tomlSettings = toml.Config{
 		return field
 	},
 	MissingField: func(rt reflect.Type, field string) error {
-		link := ""
+		id := fmt.Sprintf("%s.%s", rt.String(), field)
+		if deprecatedConfigFields[id] {
+			log.Warn(fmt.Sprintf("Config field '%s' is deprecated and won't have any effect.", id))
+			return nil
+		}
+		var link string
 		if unicode.IsUpper(rune(rt.Name()[0])) && rt.PkgPath() != "main" {
 			link = fmt.Sprintf(", see https://godoc.org/%s#%s for available fields", rt.PkgPath(), rt.Name())
 		}
@@ -71,15 +88,29 @@ var tomlSettings = toml.Config{
 	},
 }
 
+var deprecatedConfigFields = map[string]bool{
+	"ethconfig.Config.EVMInterpreter":          true,
+	"ethconfig.Config.EWASMInterpreter":        true,
+	"ethconfig.Config.TrieCleanCacheJournal":   true,
+	"ethconfig.Config.TrieCleanCacheRejournal": true,
+	"ethconfig.Config.LightServ":               true,
+	"ethconfig.Config.LightIngress":            true,
+	"ethconfig.Config.LightEgress":             true,
+	"ethconfig.Config.LightPeers":              true,
+	"ethconfig.Config.LightNoPrune":            true,
+	"ethconfig.Config.LightNoSyncServe":        true,
+}
+
 type ethstatsConfig struct {
 	URL string `toml:",omitempty"`
 }
 
 type gethConfig struct {
-	Eth      ethconfig.Config
-	Node     node.Config
-	Ethstats ethstatsConfig
-	Metrics  metrics.Config
+	Eth        ethconfig.Config
+	Node       node.Config
+	Ethstats   ethstatsConfig
+	Metrics    metrics.Config
+	FakeBeacon fakebeacon.Config
 }
 
 func loadConfig(file string, cfg *gethConfig) error {
@@ -98,17 +129,19 @@ func loadConfig(file string, cfg *gethConfig) error {
 }
 
 func defaultNodeConfig() node.Config {
+	git, _ := version.VCS()
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
-	cfg.Version = params.VersionWithCommit(gitCommit, gitDate)
+	cfg.Version = version.WithCommit(git.Commit, git.Date)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
 	cfg.WSModules = append(cfg.WSModules, "eth")
-	cfg.IPCPath = "geth.ipc"
+	cfg.IPCPath = clientIdentifier + ".ipc"
 	return cfg
 }
 
-// makeConfigNode loads geth configuration and creates a blank node instance.
-func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
+// loadBaseConfig loads the gethConfig based on the given command line
+// parameters and config file.
+func loadBaseConfig(ctx *cli.Context) gethConfig {
 	// Load defaults.
 	cfg := gethConfig{
 		Eth:     ethconfig.Defaults,
@@ -117,21 +150,45 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	}
 
 	// Load config file.
-	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
+	if file := ctx.String(configFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
 		}
+		// some default options could be overwritten after `loadConfig()`
+		// apply the default value if the options are not specified in config.toml file.
+		ethconfig.ApplyDefaultEthConfig(&cfg.Eth)
+	}
+
+	scheme := cfg.Eth.StateScheme
+	if scheme != "" {
+		if !rawdb.ValidateStateScheme(scheme) {
+			utils.Fatalf("Invalid state scheme param in config: %s", scheme)
+		}
+	}
+	if cfg.Eth.Genesis != nil && cfg.Eth.Genesis.Config != nil {
+		log.Warn("Chain config in the configuration file is ignored!")
 	}
 
 	// Apply flags.
 	utils.SetNodeConfig(ctx, &cfg.Node)
+	return cfg
+}
+
+// makeConfigNode loads geth configuration and creates a blank node instance.
+func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
+	cfg := loadBaseConfig(ctx)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+	// Node doesn't by default populate account manager backends
+	if err := setAccountManagerBackends(stack.Config(), stack.AccountManager(), stack.KeyStoreDir()); err != nil {
+		utils.Fatalf("Failed to set account manager backends: %v", err)
+	}
+
 	utils.SetEthConfig(ctx, stack, &cfg.Eth)
-	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
-		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
+	if ctx.IsSet(utils.EthStatsURLFlag.Name) {
+		cfg.Ethstats.URL = ctx.String(utils.EthStatsURLFlag.Name)
 	}
 	applyMetricConfig(ctx, &cfg)
 
@@ -141,29 +198,94 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 // makeFullNode loads geth configuration and creates the Ethereum backend.
 func makeFullNode(ctx *cli.Context) (*node.Node, ethapi.Backend) {
 	stack, cfg := makeConfigNode(ctx)
-	if ctx.GlobalIsSet(utils.OverrideBerlinFlag.Name) {
-		cfg.Eth.OverrideBerlin = new(big.Int).SetUint64(ctx.GlobalUint64(utils.OverrideBerlinFlag.Name))
+	//if ctx.IsSet(utils.RialtoHash.Name) {
+	//	v := ctx.String(utils.RialtoHash.Name)
+	//	params.RialtoGenesisHash = common.HexToHash(v)
+	//}
+
+	if ctx.IsSet(utils.OverridePassedForkTime.Name) {
+		v := ctx.Uint64(utils.OverridePassedForkTime.Name)
+		cfg.Eth.OverridePassedForkTime = &v
 	}
+	if ctx.IsSet(utils.OverrideLorentz.Name) {
+		v := ctx.Uint64(utils.OverrideLorentz.Name)
+		cfg.Eth.OverrideLorentz = &v
+	}
+	if ctx.IsSet(utils.OverrideMaxwell.Name) {
+		v := ctx.Uint64(utils.OverrideMaxwell.Name)
+		cfg.Eth.OverrideMaxwell = &v
+	}
+	if ctx.IsSet(utils.OverrideFermi.Name) {
+		v := ctx.Uint64(utils.OverrideFermi.Name)
+		cfg.Eth.OverrideFermi = &v
+	}
+	if ctx.IsSet(utils.OverrideVerkle.Name) {
+		v := ctx.Uint64(utils.OverrideVerkle.Name)
+		cfg.Eth.OverrideVerkle = &v
+	}
+	if ctx.IsSet(utils.OverrideFullImmutabilityThreshold.Name) {
+		params.FullImmutabilityThreshold = ctx.Uint64(utils.OverrideFullImmutabilityThreshold.Name)
+		downloader.FullMaxForkAncestry = ctx.Uint64(utils.OverrideFullImmutabilityThreshold.Name)
+	}
+	if ctx.IsSet(utils.OverrideMinBlocksForBlobRequests.Name) {
+		params.MinBlocksForBlobRequests = ctx.Uint64(utils.OverrideMinBlocksForBlobRequests.Name)
+		params.MinTimeDurationForBlobRequests = uint64(float64(params.MinBlocksForBlobRequests) * 0.75 /*maxwellBlockInterval*/)
+	}
+	if ctx.IsSet(utils.OverrideDefaultExtraReserveForBlobRequests.Name) {
+		params.DefaultExtraReserveForBlobRequests = ctx.Uint64(utils.OverrideDefaultExtraReserveForBlobRequests.Name)
+	}
+	if ctx.IsSet(utils.OverrideBreatheBlockInterval.Name) {
+		params.BreatheBlockInterval = ctx.Uint64(utils.OverrideBreatheBlockInterval.Name)
+	}
+	if ctx.IsSet(utils.OverrideFixedTurnLength.Name) {
+		params.FixedTurnLength = ctx.Uint64(utils.OverrideFixedTurnLength.Name)
+	}
+
 	backend, eth := utils.RegisterEthService(stack, &cfg.Eth)
 
-	// Configure catalyst.
-	if ctx.GlobalBool(utils.CatalystFlag.Name) {
-		if eth == nil {
-			utils.Fatalf("Catalyst does not work in light client mode.")
+	// Create gauge with geth system and build information
+	if eth != nil { // The 'eth' backend may be nil in light mode
+		var protos []string
+		for _, p := range eth.Protocols() {
+			protos = append(protos, fmt.Sprintf("%v/%d", p.Name, p.Version))
 		}
-		if err := catalyst.Register(stack, eth); err != nil {
-			utils.Fatalf("%v", err)
-		}
+		metrics.NewRegisteredGaugeInfo("geth/info", nil).Update(metrics.GaugeInfoValue{
+			"arch":      runtime.GOARCH,
+			"os":        runtime.GOOS,
+			"version":   cfg.Node.Version,
+			"protocols": strings.Join(protos, ","),
+		})
 	}
 
-	// Configure GraphQL if requested
-	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
-		utils.RegisterGraphQLService(stack, backend, cfg.Node)
+	// Configure log filter RPC API.
+	filterSystem := utils.RegisterFilterAPI(stack, backend, &cfg.Eth)
+
+	// Configure GraphQL if requested.
+	if ctx.IsSet(utils.GraphQLEnabledFlag.Name) {
+		utils.RegisterGraphQLService(stack, backend, filterSystem, &cfg.Node)
 	}
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
 	}
+
+	if ctx.IsSet(utils.FakeBeaconAddrFlag.Name) {
+		cfg.FakeBeacon.Addr = ctx.String(utils.FakeBeaconAddrFlag.Name)
+	}
+	if ctx.IsSet(utils.FakeBeaconPortFlag.Name) {
+		cfg.FakeBeacon.Port = ctx.Int(utils.FakeBeaconPortFlag.Name)
+	}
+	if cfg.FakeBeacon.Enable || ctx.IsSet(utils.FakeBeaconEnabledFlag.Name) {
+		go fakebeacon.NewService(&cfg.FakeBeacon, backend).Run()
+	}
+
+	git, _ := version.VCS()
+	utils.SetupMetrics(&cfg.Metrics,
+		utils.EnableBuildInfo(git.Commit, git.Date),
+		utils.EnableMinerInfo(ctx, &cfg.Eth.Miner),
+		utils.EnableNodeInfo(&cfg.Eth.TxPool, stack.Server().NodeInfo()),
+		utils.EnableNodeTrack(ctx, &cfg.Eth, stack),
+	)
 	return stack, backend
 }
 
@@ -197,34 +319,124 @@ func dumpConfig(ctx *cli.Context) error {
 }
 
 func applyMetricConfig(ctx *cli.Context, cfg *gethConfig) {
-	if ctx.GlobalIsSet(utils.MetricsEnabledFlag.Name) {
-		cfg.Metrics.Enabled = ctx.GlobalBool(utils.MetricsEnabledFlag.Name)
+	if ctx.IsSet(utils.MetricsEnabledFlag.Name) {
+		cfg.Metrics.Enabled = ctx.Bool(utils.MetricsEnabledFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsEnabledExpensiveFlag.Name) {
-		cfg.Metrics.EnabledExpensive = ctx.GlobalBool(utils.MetricsEnabledExpensiveFlag.Name)
+	if ctx.IsSet(utils.MetricsEnabledExpensiveFlag.Name) {
+		log.Warn("Expensive metrics will remain in BSC and may be removed in the future", "flag", utils.MetricsEnabledExpensiveFlag.Name)
+		cfg.Metrics.EnabledExpensive = ctx.Bool(utils.MetricsEnabledExpensiveFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsHTTPFlag.Name) {
-		cfg.Metrics.HTTP = ctx.GlobalString(utils.MetricsHTTPFlag.Name)
+	if ctx.IsSet(utils.MetricsHTTPFlag.Name) {
+		cfg.Metrics.HTTP = ctx.String(utils.MetricsHTTPFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsPortFlag.Name) {
-		cfg.Metrics.Port = ctx.GlobalInt(utils.MetricsPortFlag.Name)
+	if ctx.IsSet(utils.MetricsPortFlag.Name) {
+		cfg.Metrics.Port = ctx.Int(utils.MetricsPortFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsEnableInfluxDBFlag.Name) {
-		cfg.Metrics.EnableInfluxDB = ctx.GlobalBool(utils.MetricsEnableInfluxDBFlag.Name)
+	if ctx.IsSet(utils.MetricsEnableInfluxDBFlag.Name) {
+		cfg.Metrics.EnableInfluxDB = ctx.Bool(utils.MetricsEnableInfluxDBFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBEndpointFlag.Name) {
-		cfg.Metrics.InfluxDBEndpoint = ctx.GlobalString(utils.MetricsInfluxDBEndpointFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBEndpointFlag.Name) {
+		cfg.Metrics.InfluxDBEndpoint = ctx.String(utils.MetricsInfluxDBEndpointFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
-		cfg.Metrics.InfluxDBDatabase = ctx.GlobalString(utils.MetricsInfluxDBDatabaseFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBDatabaseFlag.Name) {
+		cfg.Metrics.InfluxDBDatabase = ctx.String(utils.MetricsInfluxDBDatabaseFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBUsernameFlag.Name) {
-		cfg.Metrics.InfluxDBUsername = ctx.GlobalString(utils.MetricsInfluxDBUsernameFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBUsernameFlag.Name) {
+		cfg.Metrics.InfluxDBUsername = ctx.String(utils.MetricsInfluxDBUsernameFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBPasswordFlag.Name) {
-		cfg.Metrics.InfluxDBPassword = ctx.GlobalString(utils.MetricsInfluxDBPasswordFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBPasswordFlag.Name) {
+		cfg.Metrics.InfluxDBPassword = ctx.String(utils.MetricsInfluxDBPasswordFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.MetricsInfluxDBTagsFlag.Name) {
-		cfg.Metrics.InfluxDBTags = ctx.GlobalString(utils.MetricsInfluxDBTagsFlag.Name)
+	if ctx.IsSet(utils.MetricsInfluxDBTagsFlag.Name) {
+		cfg.Metrics.InfluxDBTags = ctx.String(utils.MetricsInfluxDBTagsFlag.Name)
 	}
+	if ctx.IsSet(utils.MetricsEnableInfluxDBV2Flag.Name) {
+		cfg.Metrics.EnableInfluxDBV2 = ctx.Bool(utils.MetricsEnableInfluxDBV2Flag.Name)
+	}
+	if ctx.IsSet(utils.MetricsInfluxDBTokenFlag.Name) {
+		cfg.Metrics.InfluxDBToken = ctx.String(utils.MetricsInfluxDBTokenFlag.Name)
+	}
+	if ctx.IsSet(utils.MetricsInfluxDBBucketFlag.Name) {
+		cfg.Metrics.InfluxDBBucket = ctx.String(utils.MetricsInfluxDBBucketFlag.Name)
+	}
+	if ctx.IsSet(utils.MetricsInfluxDBOrganizationFlag.Name) {
+		cfg.Metrics.InfluxDBOrganization = ctx.String(utils.MetricsInfluxDBOrganizationFlag.Name)
+	}
+	// Sanity-check the commandline flags. It is fine if some unused fields is part
+	// of the toml-config, but we expect the commandline to only contain relevant
+	// arguments, otherwise it indicates an error.
+	var (
+		enableExport   = ctx.Bool(utils.MetricsEnableInfluxDBFlag.Name)
+		enableExportV2 = ctx.Bool(utils.MetricsEnableInfluxDBV2Flag.Name)
+	)
+	if enableExport || enableExportV2 {
+		v1FlagIsSet := ctx.IsSet(utils.MetricsInfluxDBUsernameFlag.Name) ||
+			ctx.IsSet(utils.MetricsInfluxDBPasswordFlag.Name)
+
+		v2FlagIsSet := ctx.IsSet(utils.MetricsInfluxDBTokenFlag.Name) ||
+			ctx.IsSet(utils.MetricsInfluxDBOrganizationFlag.Name) ||
+			ctx.IsSet(utils.MetricsInfluxDBBucketFlag.Name)
+
+		if enableExport && v2FlagIsSet {
+			utils.Fatalf("Flags --influxdb.metrics.organization, --influxdb.metrics.token, --influxdb.metrics.bucket are only available for influxdb-v2")
+		} else if enableExportV2 && v1FlagIsSet {
+			utils.Fatalf("Flags --influxdb.metrics.username, --influxdb.metrics.password are only available for influxdb-v1")
+		}
+	}
+}
+
+func setAccountManagerBackends(conf *node.Config, am *accounts.Manager, keydir string) error {
+	scryptN := keystore.StandardScryptN
+	scryptP := keystore.StandardScryptP
+	if conf.UseLightweightKDF {
+		scryptN = keystore.LightScryptN
+		scryptP = keystore.LightScryptP
+	}
+
+	// Assemble the supported backends
+	if len(conf.ExternalSigner) > 0 {
+		log.Info("Using external signer", "url", conf.ExternalSigner)
+		if extBackend, err := external.NewExternalBackend(conf.ExternalSigner); err == nil {
+			am.AddBackend(extBackend)
+			return nil
+		} else {
+			return fmt.Errorf("error connecting to external signer: %v", err)
+		}
+	}
+
+	// For now, we're using EITHER external signer OR local signers.
+	// If/when we implement some form of lockfile for USB and keystore wallets,
+	// we can have both, but it's very confusing for the user to see the same
+	// accounts in both externally and locally, plus very racey.
+	am.AddBackend(keystore.NewKeyStore(keydir, scryptN, scryptP))
+	if conf.USB {
+		// Start a USB hub for Ledger hardware wallets
+		if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
+		} else {
+			am.AddBackend(ledgerhub)
+		}
+		// Start a USB hub for Trezor hardware wallets (HID version)
+		if trezorhub, err := usbwallet.NewTrezorHubWithHID(); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start HID Trezor hub, disabling: %v", err))
+		} else {
+			am.AddBackend(trezorhub)
+		}
+		// Start a USB hub for Trezor hardware wallets (WebUSB version)
+		if trezorhub, err := usbwallet.NewTrezorHubWithWebUSB(); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start WebUSB Trezor hub, disabling: %v", err))
+		} else {
+			am.AddBackend(trezorhub)
+		}
+	}
+	if len(conf.SmartCardDaemonPath) > 0 {
+		// Start a smart card hub
+		if schub, err := scwallet.NewHub(conf.SmartCardDaemonPath, scwallet.Scheme, keydir); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start smart card hub, disabling: %v", err))
+		} else {
+			am.AddBackend(schub)
+		}
+	}
+
+	return nil
 }

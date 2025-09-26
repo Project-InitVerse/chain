@@ -17,23 +17,18 @@
 // faucet is an Ether faucet backed by a light client.
 package main
 
-//go:generate go-bindata   -nometadata -o website.go faucet.html
-//go:generate gofmt -w -s website.go
-
 import (
 	"bytes"
-	"container/list"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/Project-InitVerse/chain/common/hexutil"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"math"
 	"math/big"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -47,31 +42,21 @@ import (
 	"github.com/Project-InitVerse/chain/accounts"
 	"github.com/Project-InitVerse/chain/accounts/abi"
 	"github.com/Project-InitVerse/chain/accounts/keystore"
-	"github.com/Project-InitVerse/chain/cmd/utils"
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/core"
 	"github.com/Project-InitVerse/chain/core/types"
-	"github.com/Project-InitVerse/chain/eth/downloader"
-	"github.com/Project-InitVerse/chain/eth/ethconfig"
 	"github.com/Project-InitVerse/chain/ethclient"
-	"github.com/Project-InitVerse/chain/ethstats"
-	"github.com/Project-InitVerse/chain/les"
 	"github.com/Project-InitVerse/chain/log"
-	"github.com/Project-InitVerse/chain/node"
-	"github.com/Project-InitVerse/chain/p2p"
-	"github.com/Project-InitVerse/chain/p2p/enode"
-	"github.com/Project-InitVerse/chain/p2p/nat"
 	"github.com/Project-InitVerse/chain/params"
 	"github.com/gorilla/websocket"
+	"golang.org/x/time/rate"
 )
 
 var (
-	genesisFlag = flag.String("genesis", "", "Genesis json file to seed the chain with")
-	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	ethPortFlag = flag.Int("ethport", 30303, "Listener port for the devp2p connection")
-	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
-	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
-	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+	genesisFlag       = flag.String("genesis", "", "Genesis json file to seed the chain with")
+	apiPortFlag       = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
+	wsEndpoint        = flag.String("ws", "http://127.0.0.1:7777/", "Url to ws endpoint")
+	wsEndpointMainnet = flag.String("ws.mainnet", "", "Url to ws endpoint of BSC mainnet")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
@@ -93,31 +78,39 @@ var (
 	fixGasPrice        = flag.Int64("faucet.fixedprice", 0, "Will use fixed gas price if specified")
 	twitterTokenFlag   = flag.String("twitter.token", "", "Bearer token to authenticate with the v2 Twitter API")
 	twitterTokenV1Flag = flag.String("twitter.token.v1", "", "Bearer token to authenticate with the v1.1 Twitter API")
-	ethApiFlag         = flag.String("ethApi", "", "resend transaction through rpc")
+
+	resendInterval    = 15 * time.Second
+	resendBatchSize   = 3
+	resendMaxGasPrice = big.NewInt(50 * params.GWei)
+	wsReadTimeout     = 5 * time.Minute
+	minMainnetBalance = big.NewInt(2 * 1e6 * params.GWei) // 0.002 bnb
 )
 
 var (
-	ether        = new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
+	ether        = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 	bep2eAbiJson = `[ { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "owner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "spender", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" } ], "name": "Approval", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "from", "type": "address" }, { "indexed": true, "internalType": "address", "name": "to", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" } ], "name": "Transfer", "type": "event" }, { "inputs": [], "name": "totalSupply", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "decimals", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "symbol", "outputs": [ { "internalType": "string", "name": "", "type": "string" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "getOwner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "account", "type": "address" } ], "name": "balanceOf", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "transfer", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" } ], "name": "allowance", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "approve", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "sender", "type": "address" }, { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" } ], "name": "transferFrom", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "nonpayable", "type": "function" } ]`
 )
 
-var (
-	gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
-	gitDate   = "" // Git commit date YYYYMMDD of the release (set via linker flags)
-)
+//go:embed faucet.html
+var websiteTmpl string
+
+func weiToEtherStringFx(wei *big.Int, prec int) string {
+	etherValue := new(big.Float).Quo(new(big.Float).SetInt(wei), big.NewFloat(params.Ether))
+	// Format the big.Float directly to a string with the specified precision
+	return etherValue.Text('f', prec)
+}
 
 func main() {
 	// Parse the flags and set up the logger to print everything requested
 	flag.Parse()
-
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
-
+	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.FromLegacyLevel(*logFlag), false)))
+	log.Info("faucet started")
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
 		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("0.%s Inis", strconv.FormatFloat(amount, 'f', -1, 64))
+		amounts[i] = fmt.Sprintf("0.%s BNBs", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -155,13 +148,8 @@ func main() {
 			AmountStr: amountStr,
 		}
 	}
-	// Load up and render the faucet website
-	tmpl, err := Asset("faucet.html")
-	if err != nil {
-		log.Crit("Failed to load the faucet template", "err", err)
-	}
 	website := new(bytes.Buffer)
-	err = template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
+	err := template.Must(template.New("").Parse(websiteTmpl)).Execute(website, map[string]interface{}{
 		"Network":    *netnameFlag,
 		"Amounts":    amounts,
 		"Recaptcha":  *captchaToken,
@@ -172,32 +160,19 @@ func main() {
 		log.Crit("Failed to render the faucet template", "err", err)
 	}
 	// Load and parse the genesis block requested by the user
-	blob, err := ioutil.ReadFile(*genesisFlag)
+	genesis, err := getGenesis(*genesisFlag, false, false)
 	if err != nil {
 		log.Crit("Failed to read genesis block contents", "genesis", *genesisFlag, "err", err)
 	}
-	genesis := new(core.Genesis)
-	if err = json.Unmarshal(blob, genesis); err != nil {
-		log.Crit("Failed to parse genesis block json", "err", err)
-	}
-	// Convert the bootnodes to internal enode representations
-	var enodes []*enode.Node
-	for _, boot := range strings.Split(*bootFlag, ",") {
-		if url, err := enode.Parse(enode.ValidSchemes, boot); err == nil {
-			enodes = append(enodes, url)
-		} else {
-			log.Error("Failed to parse bootnode URL", "url", boot, "err", err)
-		}
-	}
 	// Load up the account key and decrypt its password
-	blob, err = ioutil.ReadFile(*accPassFlag)
+	blob, err := os.ReadFile(*accPassFlag)
 	if err != nil {
 		log.Crit("Failed to read account password contents", "file", *accPassFlag, "err", err)
 	}
 	pass := strings.TrimSuffix(string(blob), "\n")
 
 	ks := keystore.NewKeyStore(filepath.Join(os.Getenv("HOME"), ".faucet", "keys_2"), keystore.StandardScryptN, keystore.StandardScryptP)
-	if blob, err = ioutil.ReadFile(*accJSONFlag); err != nil {
+	if blob, err = os.ReadFile(*accJSONFlag); err != nil {
 		log.Crit("Failed to read account key contents", "file", *accJSONFlag, "err", err)
 	}
 	acc, err := ks.Import(blob, pass, pass)
@@ -208,12 +183,12 @@ func main() {
 		log.Crit("Failed to unlock faucet signer account", "err", err)
 	}
 	// Assemble and start the faucet light service
-	faucet, err := newFaucet(genesis, *ethPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes(), bep2eInfos)
+	faucet, err := newFaucet(genesis, *wsEndpoint, *wsEndpointMainnet, ks, website.Bytes(), bep2eInfos)
 	if err != nil {
 		log.Crit("Failed to start faucet", "err", err)
 	}
 	defer faucet.close()
-	safeQueue = NewSafeQueue()
+
 	if err := faucet.listenAndServe(*apiPortFlag); err != nil {
 		log.Crit("Failed to launch faucet API", "err", err)
 	}
@@ -235,10 +210,10 @@ type bep2eInfo struct {
 
 // faucet represents a crypto faucet backed by an Ethereum light client.
 type faucet struct {
-	config *params.ChainConfig // Chain configurations for signing
-	stack  *node.Node          // Ethereum protocol stack
-	client *ethclient.Client   // Client connection to the Ethereum chain
-	index  []byte              // Index page to serve up on the web
+	config        *params.ChainConfig // Chain configurations for signing
+	client        *ethclient.Client   // Client connection to the Ethereum chain
+	clientMainnet *ethclient.Client   // Client connection to BSC mainnet for balance check
+	index         []byte              // Index page to serve up on the web
 
 	keystore *keystore.KeyStore // Keystore containing the single signer
 	account  accounts.Account   // Account funding user faucet requests
@@ -256,6 +231,8 @@ type faucet struct {
 
 	bep2eInfos map[string]bep2eInfo
 	bep2eAbi   abi.ABI
+
+	limiter *IPRateLimiter
 }
 
 // wsConn wraps a websocket connection with a write mutex as the underlying
@@ -265,137 +242,51 @@ type wsConn struct {
 	wlock sync.Mutex
 }
 
-type SafeQueue struct {
-	list  *list.List
-	mutex sync.Mutex
-}
-
-var safeQueue *SafeQueue
-
-func NewSafeQueue() *SafeQueue {
-	return &SafeQueue{
-		list:  list.New(),
-		mutex: sync.Mutex{},
-	}
-}
-
-func (sq *SafeQueue) Enqueue(value interface{}) {
-	sq.mutex.Lock()
-	defer sq.mutex.Unlock()
-	sq.list.PushBack(value)
-}
-
-func (sq *SafeQueue) Dequeue() interface{} {
-	sq.mutex.Lock()
-	defer sq.mutex.Unlock()
-	elem := sq.list.Front()
-
-	if elem == nil {
-		return nil
-	}
-	sq.list.Remove(elem)
-	return elem.Value
-}
-func (sq *SafeQueue) First() interface{} {
-	sq.mutex.Lock()
-	defer sq.mutex.Unlock()
-	elem := sq.list.Front()
-
-	if elem == nil {
-		return nil
-	}
-	return elem.Value
-}
-
-func (sq *SafeQueue) Size() int {
-	sq.mutex.Lock()
-	defer sq.mutex.Unlock()
-	return sq.list.Len()
-}
-
-func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte, bep2eInfos map[string]bep2eInfo) (*faucet, error) {
-	// Assemble the raw devp2p protocol stack
-	stack, err := node.New(&node.Config{
-		Name:    "geth",
-		Version: params.VersionWithCommit(gitCommit, gitDate),
-		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
-		NoUSB:   true,
-		P2P: p2p.Config{
-			NAT:              nat.Any(),
-			NoDiscovery:      true,
-			DiscoveryV5:      true,
-			ListenAddr:       fmt.Sprintf(":%d", port),
-			MaxPeers:         25,
-			BootstrapNodesV5: enodes,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+func newFaucet(genesis *core.Genesis, url string, mainnetUrl string, ks *keystore.KeyStore, index []byte, bep2eInfos map[string]bep2eInfo) (*faucet, error) {
 	bep2eAbi, err := abi.JSON(strings.NewReader(bep2eAbiJson))
 	if err != nil {
 		return nil, err
 	}
-	// Assemble the Ethereum light client protocol
-	cfg := ethconfig.Defaults
-	cfg.SyncMode = downloader.LightSync
-	cfg.NetworkId = network
-	cfg.Genesis = genesis
-	utils.SetDNSDiscoveryDefaults(&cfg, genesis.ToBlock(nil).Hash())
-
-	lesBackend, err := les.New(stack, &cfg)
+	client, err := ethclient.Dial(url)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to register the Ethereum service: %w", err)
-	}
-
-	// Assemble the ethstats monitoring and reporting service'
-	if stats != "" {
-		if err := ethstats.New(stack, lesBackend.ApiBackend, lesBackend.Engine(), stats); err != nil {
-			return nil, err
-		}
-	}
-	// Boot up the client and ensure it connects to bootnodes
-	if err := stack.Start(); err != nil {
 		return nil, err
 	}
-	for _, boot := range enodes {
-		old, err := enode.Parse(enode.ValidSchemes, boot.String())
-		if err == nil {
-			stack.Server().AddPeer(old)
-		}
-	}
-	// Attach to the client and retrieve and interesting metadatas
-	api, err := stack.Attach()
+	clientMainnet, err := ethclient.Dial(mainnetUrl)
 	if err != nil {
-		stack.Close()
+		// skip mainnet balance check if it there is no available mainnet endpoint
+		log.Warn("dail mainnet endpoint failed", "mainnetUrl", mainnetUrl, "err", err)
+	}
+
+	// Allow 1 request per minute with burst of 5, and cache up to 1000 IPs
+	limiter, err := NewIPRateLimiter(rate.Limit(1.0), 5, 1000)
+	if err != nil {
 		return nil, err
 	}
-	client := ethclient.NewClient(api)
 
 	return &faucet{
-		config:     genesis.Config,
-		stack:      stack,
-		client:     client,
-		index:      index,
-		keystore:   ks,
-		account:    ks.Accounts()[0],
-		timeouts:   make(map[string]time.Time),
-		update:     make(chan struct{}, 1),
-		bep2eInfos: bep2eInfos,
-		bep2eAbi:   bep2eAbi,
+		config:        genesis.Config,
+		client:        client,
+		clientMainnet: clientMainnet,
+		index:         index,
+		keystore:      ks,
+		account:       ks.Accounts()[0],
+		timeouts:      make(map[string]time.Time),
+		update:        make(chan struct{}, 1),
+		bep2eInfos:    bep2eInfos,
+		bep2eAbi:      bep2eAbi,
+		limiter:       limiter,
 	}, nil
 }
 
 // close terminates the Ethereum connection and tears down the faucet.
-func (f *faucet) close() error {
-	return f.stack.Close()
+func (f *faucet) close() {
+	f.client.Close()
 }
 
 // listenAndServe registers the HTTP handlers for the faucet and boots it up
 // for service user funding requests.
 func (f *faucet) listenAndServe(port int) error {
 	go f.loop()
-	go f.doReSendLoop()
 
 	http.HandleFunc("/", f.webHandler)
 	http.HandleFunc("/api", f.apiHandler)
@@ -411,7 +302,21 @@ func (f *faucet) webHandler(w http.ResponseWriter, r *http.Request) {
 
 // apiHandler handles requests for Ether grants and transaction statuses.
 func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
-	upgrader := websocket.Upgrader{}
+	ip := r.RemoteAddr
+	if len(r.Header.Get("X-Forwarded-For")) > 0 {
+		ips := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+		if len(ips) > 0 {
+			ip = strings.TrimSpace(ips[len(ips)-1])
+		}
+	}
+
+	if !f.limiter.GetLimiter(ip).Allow() {
+		log.Warn("Too many requests from client: ", "client", ip)
+		http.Error(w, "Too many requests", http.StatusTooManyRequests)
+		return
+	}
+
+	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -419,7 +324,11 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Start tracking the connection and drop at the end
 	defer conn.Close()
-	ip := extractRealIP(r)
+	ipsStr := r.Header.Get("X-Forwarded-For")
+	ips := strings.Split(ipsStr, ",")
+	if len(ips) < 2 {
+		return
+	}
 
 	f.lock.Lock()
 	wsconn := &wsConn{conn: conn}
@@ -455,8 +364,6 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		f.lock.RUnlock()
 
 		if head == nil || balance == nil {
-			fmt.Println("head", head)
-			fmt.Println("balance", balance)
 			// Report the faucet offline until initial stats are ready
 			//lint:ignore ST1005 This error is to be displayed in the browser
 			if err = sendError(wsconn, errors.New("Faucet offline")); err != nil {
@@ -473,7 +380,6 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 	if err = send(wsconn, map[string]interface{}{
 		"funds":    new(big.Int).Div(balance, ether),
 		"funded":   nonce,
-		"peers":    f.stack.Server().PeerCount(),
 		"requests": reqs,
 	}, 3*time.Second); err != nil {
 		log.Warn("Failed to send initial stats to client", "err", err)
@@ -492,7 +398,11 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			Captcha string `json:"captcha"`
 			Symbol  string `json:"symbol"`
 		}
+		// not sure if it helps or not, but set a read deadline could help prevent resource leakage
+		// if user did not give response for too long, then the routine will be stuck.
+		conn.SetReadDeadline(time.Now().Add(wsReadTimeout))
 		if err = conn.ReadJSON(&msg); err != nil {
+			log.Debug("read json message failed", "err", err, "ip", ip)
 			return
 		}
 		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://twitter.com/") && !strings.HasPrefix(msg.URL, "https://www.facebook.com/") {
@@ -510,9 +420,9 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			continue
 		}
-		log.Info("Faucet funds requested", "url", msg.URL, "tier", msg.Tier)
+		log.Info("Faucet funds requested", "url", msg.URL, "tier", msg.Tier, "ip", ip)
 
-		// If captcha verifications are enabled, make sure we're not dealing with a robot
+		// check #1: captcha verifications to exclude robot
 		if *captchaToken != "" {
 			form := url.Values{}
 			form.Add("secret", *captchaSecret)
@@ -580,7 +490,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			id = username
 		default:
 			//lint:ignore ST1005 This error is to be displayed in the browser
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethereum/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/Project-InitVerse/chain/issues")
 		}
 		if err != nil {
 			if err = sendError(wsconn, err); err != nil {
@@ -589,92 +499,108 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			continue
 		}
-		log.Info("Faucet request valid", "url", msg.URL, "tier", msg.Tier, "user", username, "address", address, "ip", ip)
 
-		// Ensure the user didn't request funds too recently
+		// check #2: check IP and ID(address) to ensure the user didn't request funds too frequently
 		f.lock.Lock()
-		var (
-			fund    bool
-			timeout time.Time
-		)
 
-		if ipTimeout := f.timeouts[ip]; time.Now().Before(ipTimeout) {
-			log.Info("ip has fund", "ip", ip)
+		if ipTimeout := f.timeouts[ips[len(ips)-2]]; time.Now().Before(ipTimeout) {
+			f.lock.Unlock()
 			if err = sendError(wsconn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(time.Until(ipTimeout)))); err != nil { // nolint: gosimple
 				log.Warn("Failed to send funding error to client", "err", err)
+				return
 			}
-			f.lock.Unlock()
+			log.Info("too frequent funding(ip)", "TimeLeft", common.PrettyDuration(time.Until(ipTimeout)), "ip", ips[len(ips)-2], "ipsStr", ipsStr)
 			continue
 		}
-
-		if timeout = f.timeouts[id]; time.Now().After(timeout) {
-			var tx *types.Transaction
-			if msg.Symbol == "INI" {
-				// User wasn't funded recently, create the funding transaction
-				amount := new(big.Int).Div(new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether), big.NewInt(10))
-				amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
-				amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
-
-				tx = types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
-			} else {
-				tokenInfo, ok := f.bep2eInfos[msg.Symbol]
-				if !ok {
-					f.lock.Unlock()
-					log.Warn("Failed to find symbol", "symbol", msg.Symbol)
-					continue
-				}
-				input, err := f.bep2eAbi.Pack("transfer", address, &tokenInfo.Amount)
-				if err != nil {
-					f.lock.Unlock()
-					log.Warn("Failed to pack transfer transaction", "err", err)
-					continue
-				}
-				tx = types.NewTransaction(f.nonce+uint64(len(f.reqs)), tokenInfo.Contract, nil, 420000, f.price, input)
+		if idTimeout := f.timeouts[id]; time.Now().Before(idTimeout) {
+			f.lock.Unlock()
+			// Send an error if too frequent funding, otherwise a success
+			if err = sendError(wsconn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(time.Until(idTimeout)))); err != nil { // nolint: gosimple
+				log.Warn("Failed to send funding error to client", "err", err)
+				return
 			}
-			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
+			log.Info("too frequent funding(id)", "TimeLeft", common.PrettyDuration(time.Until(idTimeout)), "id", id)
+			continue
+		}
+		// check #3: minimum mainnet balance check, internal error will bypass the check to avoid blocking the faucet service
+		if f.clientMainnet != nil {
+			mainnetAddr := address
+			balanceMainnet, err := f.clientMainnet.BalanceAt(context.Background(), mainnetAddr, nil)
+			if err != nil {
+				log.Warn("check balance failed, call BalanceAt", "err", err)
+			} else if balanceMainnet == nil {
+				log.Warn("check balance failed, balanceMainnet is nil")
+			} else {
+				if balanceMainnet.Cmp(minMainnetBalance) < 0 {
+					f.lock.Unlock()
+					log.Warn("insufficient BNB on BSC mainnet", "address", mainnetAddr,
+						"balanceMainnet", balanceMainnet, "minMainnetBalance", minMainnetBalance)
+					// Send an error if failed to meet the minimum balance requirement
+					if err = sendError(wsconn, fmt.Errorf("insufficient BNB on BSC mainnet        (require >=%sBNB)",
+						weiToEtherStringFx(minMainnetBalance, 3))); err != nil {
+						log.Warn("Failed to send mainnet minimum balance error to client", "err", err)
+						return
+					}
+					continue
+				}
+			}
+		}
+		log.Info("Faucet request valid", "url", msg.URL, "tier", msg.Tier, "user", username, "address", address, "ip", ip)
+
+		// now, it is ok to send tBNB or other tokens
+		var tx *types.Transaction
+		if msg.Symbol == "BNB" {
+			// User wasn't funded recently, create the funding transaction
+			amount := new(big.Int).Div(new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether), big.NewInt(10))
+			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
+			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
+
+			tx = types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
+		} else {
+			tokenInfo, ok := f.bep2eInfos[msg.Symbol]
+			if !ok {
+				f.lock.Unlock()
+				log.Warn("Failed to find symbol", "symbol", msg.Symbol)
+				continue
+			}
+			input, err := f.bep2eAbi.Pack("transfer", address, &tokenInfo.Amount)
 			if err != nil {
 				f.lock.Unlock()
-				if err = sendError(wsconn, err); err != nil {
-					log.Warn("Failed to send transaction creation error to client", "err", err)
-					return
-				}
+				log.Warn("Failed to pack transfer transaction", "err", err)
 				continue
 			}
-			// Submit the transaction and mark as funded if successful
-
-			if err := f.client.SendTransaction(context.Background(), signed); err != nil {
-				f.lock.Unlock()
-				if err = sendError(wsconn, err); err != nil {
-					log.Warn("Failed to send transaction transmission error to client", "err", err)
-					return
-				}
-				continue
-			}
-			safeQueue.Enqueue(*signed)
-			f.reqs = append(f.reqs, &request{
-				Avatar:  avatar,
-				Account: address,
-				Time:    time.Now(),
-				Tx:      signed,
-			})
-			timeout := time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute
-			grace := timeout / 288 // 24h timeout => 5m grace
-
-			f.timeouts[id] = time.Now().Add(timeout - grace)
-			f.timeouts[ip] = time.Now().Add(timeout - grace)
-			fund = true
+			tx = types.NewTransaction(f.nonce+uint64(len(f.reqs)), tokenInfo.Contract, nil, 420000, f.price, input)
 		}
-		f.lock.Unlock()
-
-		// Send an error if too frequent funding, othewise a success
-		if !fund {
-			log.Info("id has fund", "id", id)
-			if err = sendError(wsconn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(time.Until(timeout)))); err != nil { // nolint: gosimple
-				log.Warn("Failed to send funding error to client", "err", err)
+		signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
+		if err != nil {
+			f.lock.Unlock()
+			if err = sendError(wsconn, err); err != nil {
+				log.Warn("Failed to send transaction creation error to client", "err", err)
 				return
 			}
 			continue
 		}
+		// Submit the transaction and mark as funded if successful
+		if err := f.client.SendTransaction(context.Background(), signed); err != nil {
+			f.lock.Unlock()
+			if err = sendError(wsconn, err); err != nil {
+				log.Warn("Failed to send transaction transmission error to client", "err", err)
+				return
+			}
+			continue
+		}
+		f.reqs = append(f.reqs, &request{
+			Avatar:  avatar,
+			Account: address,
+			Time:    time.Now(),
+			Tx:      signed,
+		})
+		timeoutInt64 := time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute
+		grace := timeoutInt64 / 288 // 24h timeout => 5m grace
+
+		f.timeouts[id] = time.Now().Add(timeoutInt64 - grace)
+		f.timeouts[ips[len(ips)-2]] = time.Now().Add(timeoutInt64 - grace)
+		f.lock.Unlock()
 		if err = sendSuccess(wsconn, fmt.Sprintf("Funding request accepted for %s into %s", username, address.Hex())); err != nil {
 			log.Warn("Failed to send funding success to client", "err", err)
 			return
@@ -684,40 +610,6 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 		}
 	}
-}
-
-func extractRealIP(r *http.Request) string {
-	headersToCheck := []string{"X-Forwarded-For", "X-Forwarded", "X-Real-IP", "X-Cluster-Client-IP", "X-Proxy-Remote-IP", "X-Proxy-Client-IP", "Client-IP", "WL-Proxy-Client-IP"}
-	log.Info("get request header", "X-Forwarded-For", r.Header.Get("X-Forwarded-For"))
-	for _, header := range headersToCheck {
-		if ip := r.Header.Get(header); ip != "" {
-			ips := strings.Split(ip, ",")
-			for _, ip := range ips {
-				ip = strings.TrimSpace(ip)
-				if net.ParseIP(ip) != nil {
-					if !isPrivateIP(net.ParseIP(ip)) && ip != "127.0.0.1" {
-						return ip
-					}
-				}
-			}
-		}
-	}
-
-	log.Info("unable get real ip", "remoteAddr", r.RemoteAddr)
-	return strings.Split(r.RemoteAddr, ":")[0]
-}
-
-func isPrivateIP(ip net.IP) bool {
-	if ip == nil {
-		return false
-	}
-	ip = ip.To4()
-	if ip == nil {
-		return false
-	}
-	return ip[0] == 10 ||
-		(ip[0] == 192 && ip[1] == 168) ||
-		(ip[0] == 172 && (ip[1]&0xf0) == 16)
 }
 
 // refresh attempts to retrieve the latest header from the chain and extract the
@@ -757,6 +649,52 @@ func (f *faucet) refresh(head *types.Header) error {
 	f.lock.Lock()
 	f.head, f.balance = head, balance
 	f.price, f.nonce = price, nonce
+	if len(f.reqs) == 0 {
+		log.Debug("refresh len(f.reqs) == 0", "f.nonce", f.nonce)
+		f.lock.Unlock()
+		return nil
+	}
+	if f.reqs[0].Tx.Nonce() == f.nonce {
+		// if the next Tx failed to be included for a certain time(resendInterval), try to
+		// resend it with higher gasPrice, as it could be discarded in the network.
+		// Also resend extra following txs, as they could be discarded as well.
+		if time.Now().After(f.reqs[0].Time.Add(resendInterval)) {
+			for i, req := range f.reqs {
+				if i >= resendBatchSize {
+					break
+				}
+				prePrice := req.Tx.GasPrice()
+				// bump gas price 20% to replace the previous tx
+				newPrice := new(big.Int).Add(prePrice, new(big.Int).Div(prePrice, big.NewInt(5)))
+				if newPrice.Cmp(resendMaxGasPrice) >= 0 {
+					log.Info("resendMaxGasPrice reached", "newPrice", newPrice, "resendMaxGasPrice", resendMaxGasPrice, "nonce", req.Tx.Nonce())
+					break
+				}
+				newTx := types.NewTransaction(req.Tx.Nonce(), *req.Tx.To(), req.Tx.Value(), req.Tx.Gas(), newPrice, req.Tx.Data())
+				newSigned, err := f.keystore.SignTx(f.account, newTx, f.config.ChainID)
+				if err != nil {
+					log.Error("resend sign tx failed", "err", err)
+				}
+				log.Info("reqs[0] Tx has been stuck for a while, trigger resend",
+					"resendInterval", resendInterval, "resendTxSize", resendBatchSize,
+					"preHash", req.Tx.Hash().Hex(), "newHash", newSigned.Hash().Hex(),
+					"newPrice", newPrice, "nonce", req.Tx.Nonce(), "req.Tx.Gas()", req.Tx.Gas())
+				if err := f.client.SendTransaction(context.Background(), newSigned); err != nil {
+					log.Warn("resend tx failed", "err", err)
+					continue
+				}
+				req.Tx = newSigned
+			}
+		}
+	}
+	// it is abnormal that reqs[0] has larger nonce than next expected nonce.
+	// could be caused by reorg? reset it
+	if f.reqs[0].Tx.Nonce() > f.nonce {
+		log.Warn("reset due to nonce gap", "f.nonce", f.nonce, "f.reqs[0].Tx.Nonce()", f.reqs[0].Tx.Nonce())
+		f.reqs = f.reqs[:0]
+	}
+	// remove the reqs if they have smaller nonce, which means it is no longer valid,
+	// either has been accepted or replaced.
 	for len(f.reqs) > 0 && f.reqs[0].Tx.Nonce() < f.nonce {
 		f.reqs = f.reqs[1:]
 	}
@@ -796,28 +734,29 @@ func (f *faucet) loop() {
 			log.Info("Updated faucet state", "number", head.Number, "hash", head.Hash(), "age", common.PrettyAge(timestamp), "balance", f.balance, "nonce", f.nonce, "price", f.price)
 
 			balance := new(big.Int).Div(f.balance, ether)
-			peers := f.stack.Server().PeerCount()
 
 			for _, conn := range f.conns {
-				if err := send(conn, map[string]interface{}{
-					"funds":    balance,
-					"funded":   f.nonce,
-					"peers":    peers,
-					"requests": f.reqs,
-				}, time.Second); err != nil {
-					log.Warn("Failed to send stats to client", "err", err)
-					conn.conn.Close()
-					continue
-				}
-				if err := send(conn, head, time.Second); err != nil {
-					log.Warn("Failed to send header to client", "err", err)
-					conn.conn.Close()
-				}
+				go func(conn *wsConn) {
+					if err := send(conn, map[string]interface{}{
+						"funds":    balance,
+						"funded":   f.nonce,
+						"requests": f.reqs,
+					}, time.Second); err != nil {
+						log.Warn("Failed to send stats to client", "err", err)
+						conn.conn.Close()
+						return // Exit the goroutine if the first send fails
+					}
+
+					if err := send(conn, head, time.Second); err != nil {
+						log.Warn("Failed to send header to client", "err", err)
+						conn.conn.Close()
+					}
+				}(conn)
 			}
 			f.lock.RUnlock()
 		}
 	}()
-	// Wait for various events and assing to the appropriate background threads
+	// Wait for various events and assign to the appropriate background threads
 	for {
 		select {
 		case head := <-heads:
@@ -831,10 +770,12 @@ func (f *faucet) loop() {
 			// Pending requests updated, stream to clients
 			f.lock.RLock()
 			for _, conn := range f.conns {
-				if err := send(conn, map[string]interface{}{"requests": f.reqs}, time.Second); err != nil {
-					log.Warn("Failed to send requests to client", "err", err)
-					conn.conn.Close()
-				}
+				go func(conn *wsConn) {
+					if err := send(conn, map[string]interface{}{"requests": f.reqs}, time.Second); err != nil {
+						log.Warn("Failed to send requests to client", "err", err)
+						conn.conn.Close()
+					}
+				}(conn)
 			}
 			f.lock.RUnlock()
 		}
@@ -869,7 +810,6 @@ func sendSuccess(conn *wsConn, msg string) error {
 // the uniqueness identifier (user id/username), username, avatar URL and Ethereum address to fund on success.
 func authTwitter(url string, tokenV1, tokenV2 string) (string, string, string, common.Address, error) {
 	// Ensure the user specified a meaningful URL, no fancy nonsense
-	return "11", "sunny", "", common.HexToAddress("0x6c329c6769D61C34b6e4E43a0b45720a7636190d"), nil
 	parts := strings.Split(url, "/")
 	if len(parts) < 4 || parts[len(parts)-2] != "status" {
 		//lint:ignore ST1005 This error is to be displayed in the browser
@@ -893,7 +833,7 @@ func authTwitter(url string, tokenV1, tokenV2 string) (string, string, string, c
 	case tokenV2 != "":
 		return authTwitterWithTokenV2(tweetID, tokenV2)
 	}
-	// Twiter API token isn't provided so we just load the public posts
+	// Twitter API token isn't provided so we just load the public posts
 	// and scrape it for the Ethereum address and profile URL. We need to load
 	// the mobile page though since the main page loads tweet contents via JS.
 	url = strings.Replace(url, "https://twitter.com/", "https://mobile.twitter.com/", 1)
@@ -912,14 +852,14 @@ func authTwitter(url string, tokenV1, tokenV2 string) (string, string, string, c
 	}
 	username := parts[len(parts)-3]
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", "", "", common.Address{}, err
 	}
 	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
+		return "", "", "", common.Address{}, errors.New("No BNB Smart Chain address found to fund")
 	}
 	var avatar string
 	if parts = regexp.MustCompile(`src="([^"]+twimg\.com/profile_images[^"]+)"`).FindStringSubmatch(string(body)); len(parts) == 2 {
@@ -934,7 +874,7 @@ func authTwitter(url string, tokenV1, tokenV2 string) (string, string, string, c
 func authTwitterWithTokenV1(tweetID string, token string) (string, string, string, common.Address, error) {
 	// Query the tweet details from Twitter
 	url := fmt.Sprintf("https://api.twitter.com/1.1/statuses/show.json?id=%s", tweetID)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", "", "", common.Address{}, err
 	}
@@ -971,7 +911,7 @@ func authTwitterWithTokenV1(tweetID string, token string) (string, string, strin
 func authTwitterWithTokenV2(tweetID string, token string) (string, string, string, common.Address, error) {
 	// Query the tweet details from Twitter
 	url := fmt.Sprintf("https://api.twitter.com/2/tweets/%s?expansions=author_id&user.fields=profile_image_url", tweetID)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", "", "", common.Address{}, err
 	}
@@ -1038,14 +978,14 @@ func authFacebook(url string) (string, string, common.Address, error) {
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", "", common.Address{}, err
 	}
 	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
+		return "", "", common.Address{}, errors.New("No BNB Smart Chain address found to fund. Please check the post URL and verify that it can be viewed publicly.")
 	}
 	var avatar string
 	if parts = regexp.MustCompile(`src="([^"]+fbcdn\.net[^"]+)"`).FindStringSubmatch(string(body)); len(parts) == 2 {
@@ -1058,120 +998,22 @@ func authFacebook(url string) (string, string, common.Address, error) {
 // without actually performing any remote authentication. This mode is prone to
 // Byzantine attack, so only ever use for truly private networks.
 func authNoAuth(url string) (string, string, common.Address, error) {
-	var address common.Address
-	if strings.HasPrefix(url, "I4") {
-		address = common.HexToAddress(url)
-	}
-	address = common.HexToAddress(regexp.MustCompile("0x[0-9a-fA-F]{40}").FindString(url))
+	address := common.HexToAddress(regexp.MustCompile("0x[0-9a-fA-F]{40}").FindString(url))
 	if address == (common.Address{}) {
 		//lint:ignore ST1005 This error is to be displayed in the browser
-		return "", "", common.Address{}, errors.New("No INI Smart Chain address found to fund")
+		return "", "", common.Address{}, errors.New("No BNB Smart Chain address found to fund")
 	}
 	return address.Hex() + "@noauth", "", address, nil
 }
 
-func (f *faucet) rpcSendRawTransaction(tx *types.Transaction) string {
-
-	url := *ethApiFlag
-	method := "POST"
-	data, err := tx.MarshalBinary()
-	if err != nil {
-		log.Info(err.Error())
-		return ""
+// getGenesis returns a genesis based on input args
+func getGenesis(genesisFlag string, goerliFlag bool, sepoliaFlag bool) (*core.Genesis, error) {
+	switch {
+	case genesisFlag != "":
+		var genesis core.Genesis
+		err := common.LoadJSON(genesisFlag, &genesis)
+		return &genesis, err
+	default:
+		return nil, errors.New("no genesis flag provided")
 	}
-
-	jsonStr := fmt.Sprintf(`{"id":"2","jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["%s"]}`, hexutil.Encode(data))
-	payload := strings.NewReader(jsonStr)
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-
-	if err != nil {
-		log.Info(err.Error())
-		return ""
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := client.Do(req)
-	if err != nil {
-		log.Info(err.Error())
-		return ""
-	}
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Info(err.Error())
-		return ""
-	} else {
-		log.Info(string(body))
-	}
-	return string(body)
-
-}
-
-func (f *faucet) doReSendLoop() {
-	for {
-		if ethApiFlag != nil && len(*ethApiFlag) > 0 {
-			log.Info("safeQueue size", "size", safeQueue.Size())
-			if safeQueue.Size() > 0 {
-				count := safeQueue.Size()
-
-				localContext := context.Background()
-				currentHead, err := f.client.BlockNumber(localContext)
-				if err != nil {
-					time.Sleep(100 * time.Second)
-					continue
-				}
-				for i := 0; i < count; i++ {
-					signedTx := safeQueue.Dequeue().(types.Transaction)
-					txid := signedTx.Hash()
-					ret, err := f.client.TransactionDataAndReceipt(localContext, txid)
-					log.Debug("TransactionDataAndReceipt", "tx", ret, "err", err)
-					if err != nil {
-
-						if err == core.ErrNonceTooLow {
-							log.Error("find nonce too low transaction ", "txid", txid, "txTo", signedTx.To().String(), "nonce", signedTx.Nonce())
-
-						} else {
-							log.Debug("resend transaction ", "txid", txid)
-							ret := f.rpcSendRawTransaction(&signedTx)
-							if strings.Contains(ret, "nonce too low") {
-								log.Info("transaction is replace by other transaction", "txid", txid)
-							} else {
-								safeQueue.Enqueue(signedTx)
-							}
-
-						}
-
-					} else {
-						if ret.Receipt.BlockNumber == nil {
-							log.Debug("resend transaction because not in chain block", "txid", txid)
-							ret := f.rpcSendRawTransaction(&signedTx)
-							if strings.Contains(ret, "nonce too low") {
-								log.Info("transaction is replace by other transaction", "txid", txid)
-							} else {
-								safeQueue.Enqueue(signedTx)
-							}
-						} else if ret.Receipt.BlockNumber.Uint64()+10 > currentHead {
-							log.Debug("resend transaction because not meet safe block height", "txid", txid)
-							//f.client.SendTransaction(localContext, &signedTx)
-							safeQueue.Enqueue(signedTx)
-						}
-					}
-
-				}
-				time.Sleep(time.Second * 100)
-			} else {
-				time.Sleep(time.Second * 100)
-			}
-		} else {
-			count := safeQueue.Size()
-			for i := 0; i < count; i++ {
-				safeQueue.Dequeue()
-			}
-			time.Sleep(100 * time.Second)
-		}
-	}
-
 }

@@ -19,6 +19,7 @@ package inihash
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/Project-InitVerse/chain/params"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -733,9 +734,10 @@ func TestConcurrentDiskCacheGeneration(t *testing.T) {
 				CacheDir:     cachedir,
 				CachesOnDisk: 1,
 			}
-			ethash := New(config, nil, false)
+			chainCofnig := params.ChainConfig{}
+			ethash := New(&chainCofnig, config, nil, false, big.NewInt(0))
 			defer ethash.Close()
-			if err := ethash.verifySeal(nil, block.Header(), false); err != nil {
+			if err := ethash.verifySeal(nil, block.Header(), false, big.NewInt(0)); err != nil {
 				t.Errorf("proc %d: block verification failed: %v", idx, err)
 			}
 		}(i)

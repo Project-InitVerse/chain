@@ -2,7 +2,8 @@ package systemcontract
 
 import (
 	"github.com/Project-InitVerse/chain/common"
-	"github.com/Project-InitVerse/chain/consensus/parlia/vmcaller"
+	"github.com/Project-InitVerse/chain/consensus/dpos/vmcaller"
+
 	"github.com/Project-InitVerse/chain/core"
 	"github.com/Project-InitVerse/chain/core/state"
 	"github.com/Project-InitVerse/chain/core/types"
@@ -55,7 +56,7 @@ func (s *hardForkAddressList) Execute(state *state.StateDB, header *types.Header
 		return err
 	}
 
-	msg := types.NewMessage(header.Coinbase, &AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
+	msg := core.NewMessage(header.Coinbase, &AddressListContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, nil, false)
 	vmcaller.ExecuteMsg(msg, state, header, chainContext, config)
 	//context := core.NewEVMContext(msg, header, chainContext, nil)
 	//evm := vm.NewEVM(context, state, config, vm.Config{})

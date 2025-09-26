@@ -1,4 +1,4 @@
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sync/atomic"
 	"time"
 
 	"github.com/Project-InitVerse/chain/common"
@@ -29,16 +28,14 @@ import (
 	"github.com/Project-InitVerse/chain/eth/protocols/eth"
 	"github.com/Project-InitVerse/chain/log"
 	"github.com/Project-InitVerse/chain/p2p/enode"
-	"github.com/Project-InitVerse/chain/trie"
 )
 
 // ethHandler implements the eth.Backend interface to handle the various network
 // packets that are sent as replies or broadcasts.
 type ethHandler handler
 
-func (h *ethHandler) Chain() *core.BlockChain     { return h.chain }
-func (h *ethHandler) StateBloom() *trie.SyncBloom { return h.stateBloom }
-func (h *ethHandler) TxPool() eth.TxPool          { return h.txpool }
+func (h *ethHandler) Chain() *core.BlockChain { return h.chain }
+func (h *ethHandler) TxPool() eth.TxPool      { return h.txpool }
 
 // RunPeer is invoked when a peer joins on the `eth` protocol.
 func (h *ethHandler) RunPeer(peer *eth.Peer, hand eth.Handler) error {
@@ -56,7 +53,7 @@ func (h *ethHandler) PeerInfo(id enode.ID) interface{} {
 // AcceptTxs retrieves whether transaction processing is enabled on the node
 // or if inbound transactions should simply be dropped.
 func (h *ethHandler) AcceptTxs() bool {
-	return atomic.LoadUint32(&h.acceptTxs) == 1
+	return h.acceptTxs.Load()
 }
 
 // Handle is invoked from a peer's message handler when it receives a new remote
@@ -64,36 +61,29 @@ func (h *ethHandler) AcceptTxs() bool {
 func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	// Consume any broadcasts and announces, forwarding the rest to the downloader
 	switch packet := packet.(type) {
-	case *eth.BlockHeadersPacket:
-		return h.handleHeaders(peer, *packet)
-
-	case *eth.BlockBodiesPacket:
-		txset, uncleset := packet.Unpack()
-		return h.handleBodies(peer, txset, uncleset)
-
-	case *eth.NodeDataPacket:
-		if err := h.downloader.DeliverNodeData(peer.ID(), *packet); err != nil {
-			log.Debug("Failed to deliver node state data", "err", err)
-		}
-		return nil
-
-	case *eth.ReceiptsPacket:
-		if err := h.downloader.DeliverReceipts(peer.ID(), *packet); err != nil {
-			log.Debug("Failed to deliver receipts", "err", err)
-		}
-		return nil
-
 	case *eth.NewBlockHashesPacket:
 		hashes, numbers := packet.Unpack()
 		return h.handleBlockAnnounces(peer, hashes, numbers)
 
 	case *eth.NewBlockPacket:
-		return h.handleBlockBroadcast(peer, packet.Block, packet.TD)
+		return h.handleBlockBroadcast(peer, packet)
 
-	case *eth.NewPooledTransactionHashesPacket:
-		return h.txFetcher.Notify(peer.ID(), *packet)
+	case *eth.NewPooledTransactionHashesPacket66:
+
+		types := make([]byte, len(*packet))
+		sizes := make([]uint32, len(*packet))
+
+		return h.txFetcher.Notify(peer.ID(), types, sizes, *packet)
+
+	case *eth.NewPooledTransactionHashesPacket68:
+		return h.txFetcher.Notify(peer.ID(), packet.Types, packet.Sizes, packet.Hashes)
 
 	case *eth.TransactionsPacket:
+		for _, tx := range *packet {
+			if tx.Type() == types.BlobTxType {
+				return errors.New("disallowed broadcast blob transaction")
+			}
+		}
 		return h.txFetcher.Enqueue(peer.ID(), *packet, false)
 
 	case *eth.PooledTransactionsPacket:
@@ -102,79 +92,6 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)
 	}
-}
-
-// handleHeaders is invoked from a peer's message handler when it transmits a batch
-// of headers for the local node to process.
-func (h *ethHandler) handleHeaders(peer *eth.Peer, headers []*types.Header) error {
-	p := h.peers.peer(peer.ID())
-	if p == nil {
-		return errors.New("unregistered during callback")
-	}
-	// If no headers were received, but we're expencting a checkpoint header, consider it that
-	if len(headers) == 0 && p.syncDrop != nil {
-		// Stop the timer either way, decide later to drop or not
-		p.syncDrop.Stop()
-		p.syncDrop = nil
-
-		// If we're doing a fast (or snap) sync, we must enforce the checkpoint block to avoid
-		// eclipse attacks. Unsynced nodes are welcome to connect after we're done
-		// joining the network
-		if atomic.LoadUint32(&h.fastSync) == 1 {
-			peer.Log().Warn("Dropping unsynced node during sync", "addr", peer.RemoteAddr(), "type", peer.Name())
-			return errors.New("unsynced node cannot serve sync")
-		}
-	}
-	// Filter out any explicitly requested headers, deliver the rest to the downloader
-	filter := len(headers) == 1
-	if filter {
-		// If it's a potential sync progress check, validate the content and advertised chain weight
-		if p.syncDrop != nil && headers[0].Number.Uint64() == h.checkpointNumber {
-			// Disable the sync drop timer
-			p.syncDrop.Stop()
-			p.syncDrop = nil
-
-			// Validate the header and either drop the peer or continue
-			if headers[0].Hash() != h.checkpointHash {
-				return errors.New("checkpoint hash mismatch")
-			}
-			return nil
-		}
-		// Otherwise if it's a whitelisted block, validate against the set
-		if want, ok := h.whitelist[headers[0].Number.Uint64()]; ok {
-			if hash := headers[0].Hash(); want != hash {
-				peer.Log().Info("Whitelist mismatch, dropping peer", "number", headers[0].Number.Uint64(), "hash", hash, "want", want)
-				return errors.New("whitelist block mismatch")
-			}
-			peer.Log().Debug("Whitelist block verified", "number", headers[0].Number.Uint64(), "hash", want)
-		}
-		// Irrelevant of the fork checks, send the header to the fetcher just in case
-		headers = h.blockFetcher.FilterHeaders(peer.ID(), headers, time.Now())
-	}
-	if len(headers) > 0 || !filter {
-		err := h.downloader.DeliverHeaders(peer.ID(), headers)
-		if err != nil {
-			log.Debug("Failed to deliver headers", "err", err)
-		}
-	}
-	return nil
-}
-
-// handleBodies is invoked from a peer's message handler when it transmits a batch
-// of block bodies for the local node to process.
-func (h *ethHandler) handleBodies(peer *eth.Peer, txs [][]*types.Transaction, uncles [][]*types.Header) error {
-	// Filter out any explicitly requested bodies, deliver the rest to the downloader
-	filter := len(txs) > 0 || len(uncles) > 0
-	if filter {
-		txs, uncles = h.blockFetcher.FilterBodies(peer.ID(), txs, uncles, time.Now())
-	}
-	if len(txs) > 0 || len(uncles) > 0 || !filter {
-		err := h.downloader.DeliverBodies(peer.ID(), txs, uncles)
-		if err != nil {
-			log.Debug("Failed to deliver bodies", "err", err)
-		}
-	}
-	return nil
 }
 
 // handleBlockAnnounces is invoked from a peer's message handler when it transmits a
@@ -191,17 +108,45 @@ func (h *ethHandler) handleBlockAnnounces(peer *eth.Peer, hashes []common.Hash, 
 			unknownNumbers = append(unknownNumbers, numbers[i])
 		}
 	}
+
+	log.Debug("handleBlockAnnounces", "peer", peer.ID(), "numbers", numbers, "hashes", hashes)
 	for i := 0; i < len(unknownHashes); i++ {
 		h.blockFetcher.Notify(peer.ID(), unknownHashes[i], unknownNumbers[i], time.Now(), peer.RequestOneHeader, peer.RequestBodies)
+	}
+	for _, hash := range hashes {
+		stats := h.chain.GetBlockStats(hash)
+		if stats.RecvNewBlockHashTime.Load() == 0 {
+			stats.RecvNewBlockHashTime.Store(time.Now().UnixMilli())
+			addr := peer.RemoteAddr()
+			if addr != nil {
+				stats.RecvNewBlockHashFrom.Store(addr.String())
+			}
+		}
 	}
 	return nil
 }
 
 // handleBlockBroadcast is invoked from a peer's message handler when it transmits a
 // block broadcast for the local node to process.
-func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td *big.Int) error {
+func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, packet *eth.NewBlockPacket) error {
+	block := packet.Block
+	td := packet.TD
+	sidecars := packet.Sidecars
+	if sidecars != nil {
+		block = block.WithSidecars(sidecars)
+	}
+
 	// Schedule the block for import
+	log.Debug("handleBlockBroadcast", "peer", peer.ID(), "block", block.Number(), "hash", block.Hash())
 	h.blockFetcher.Enqueue(peer.ID(), block)
+	stats := h.chain.GetBlockStats(block.Hash())
+	if stats.RecvNewBlockTime.Load() == 0 {
+		stats.RecvNewBlockTime.Store(time.Now().UnixMilli())
+		addr := peer.RemoteAddr()
+		if addr != nil {
+			stats.RecvNewBlockFrom.Store(addr.String())
+		}
+	}
 
 	// Assuming the block is importable by the peer, but possibly not yet done so,
 	// calculate the head hash and TD that the peer truly must have.
@@ -212,7 +157,7 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td
 	// Update the peer's total difficulty if better than the previous
 	if _, td := peer.Head(); trueTD.Cmp(td) > 0 {
 		peer.SetHead(trueHead, trueTD)
-		h.chainSync.handlePeerEvent(peer)
+		h.chainSync.handlePeerEvent()
 	}
 	return nil
 }

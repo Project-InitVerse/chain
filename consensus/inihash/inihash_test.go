@@ -17,6 +17,7 @@
 package inihash
 
 import (
+	"github.com/Project-InitVerse/chain/params"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -46,7 +47,7 @@ func TestTestMode(t *testing.T) {
 	case block := <-results:
 		header.Nonce = types.EncodeNonce(block.Nonce())
 		header.MixDigest = block.MixDigest()
-		if err := ethash.verifySeal(nil, header, false); err != nil {
+		if err := ethash.verifySeal(nil, header, false, big.NewInt(0)); err != nil {
 			t.Fatalf("unexpected verification error: %v", err)
 		}
 	case <-time.NewTimer(4 * time.Second).C:
@@ -69,7 +70,9 @@ func TestCacheFileEvict(t *testing.T) {
 		CacheDir:     tmpdir,
 		PowMode:      ModeTest,
 	}
-	e := New(config, nil, false, nil)
+	chainConfig := params.ChainConfig{}
+
+	e := New(&chainConfig, config, nil, false, nil)
 	defer e.Close()
 
 	workers := 8
@@ -93,7 +96,7 @@ func verifyTest(wg *sync.WaitGroup, e *Inihash, workerIndex, epochs int) {
 			block = 0
 		}
 		header := &types.Header{Number: big.NewInt(block), Difficulty: big.NewInt(100)}
-		e.verifySeal(nil, header, false)
+		e.verifySeal(nil, header, false, big.NewInt(0))
 	}
 }
 

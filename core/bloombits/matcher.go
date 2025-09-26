@@ -59,7 +59,7 @@ type partialMatches struct {
 // bit with the given number of fetch elements, or a response for such a request.
 // It can also have the actual results set to be used as a delivery data struct.
 //
-// The contest and error fields are used by the light client to terminate matching
+// The context and error fields are used by the light client to terminate matching
 // early if an error is encountered on some path of the pipeline.
 type Retrieval struct {
 	Bit      uint
@@ -84,7 +84,7 @@ type Matcher struct {
 	retrievals chan chan *Retrieval // Retriever processes waiting for task allocations
 	deliveries chan *Retrieval      // Retriever processes waiting for task response deliveries
 
-	running uint32 // Atomic flag whether a session is live or not
+	running atomic.Bool // Atomic flag whether a session is live or not
 }
 
 // NewMatcher creates a new pipeline for retrieving bloom bit streams and doing
@@ -147,10 +147,10 @@ func (m *Matcher) addScheduler(idx uint) {
 // channel is closed.
 func (m *Matcher) Start(ctx context.Context, begin, end uint64, results chan uint64) (*MatcherSession, error) {
 	// Make sure we're not creating concurrent sessions
-	if atomic.SwapUint32(&m.running, 1) == 1 {
+	if m.running.Swap(true) {
 		return nil, errors.New("matcher already running")
 	}
-	defer atomic.StoreUint32(&m.running, 0)
+	defer m.running.Store(false)
 
 	// Initiate a new matching round
 	session := &MatcherSession{
@@ -392,7 +392,7 @@ func (m *Matcher) distributor(dist chan *request, session *MatcherSession) {
 		shutdown   = session.quit            // Shutdown request channel, will gracefully wait for pending requests
 	)
 
-	// assign is a helper method fo try to assign a pending bit an actively
+	// assign is a helper method to try to assign a pending bit an actively
 	// listening servicer, or schedule it up for later when one arrives.
 	assign := func(bit uint) {
 		select {
@@ -513,8 +513,9 @@ type MatcherSession struct {
 	closer sync.Once     // Sync object to ensure we only ever close once
 	quit   chan struct{} // Quit channel to request pipeline termination
 
-	ctx context.Context // Context used by the light client to abort filtering
-	err atomic.Value    // Global error to track retrieval failures deep in the chain
+	ctx     context.Context // Context used by the light client to abort filtering
+	err     error           // Global error to track retrieval failures deep in the chain
+	errLock sync.Mutex
 
 	pend sync.WaitGroup
 }
@@ -532,10 +533,10 @@ func (s *MatcherSession) Close() {
 
 // Error returns any failure encountered during the matching session.
 func (s *MatcherSession) Error() error {
-	if err := s.err.Load(); err != nil {
-		return err.(error)
-	}
-	return nil
+	s.errLock.Lock()
+	defer s.errLock.Unlock()
+
+	return s.err
 }
 
 // allocateRetrieval assigns a bloom bit index to a client process that can either
@@ -598,6 +599,9 @@ func (s *MatcherSession) deliverSections(bit uint, sections []uint64, bitsets []
 // of the session, any request in-flight need to be responded to! Empty responses
 // are fine though in that case.
 func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan *Retrieval) {
+	waitTimer := time.NewTimer(wait)
+	defer waitTimer.Stop()
+
 	for {
 		// Allocate a new bloom bit index to retrieve data for, stopping when done
 		bit, ok := s.allocateRetrieval()
@@ -606,6 +610,7 @@ func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan 
 		}
 		// Bit allocated, throttle a bit if we're below our batch limit
 		if s.pendingSections(bit) < batch {
+			waitTimer.Reset(wait)
 			select {
 			case <-s.quit:
 				// Session terminating, we can't meaningfully service, abort
@@ -613,8 +618,8 @@ func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan 
 				s.deliverSections(bit, []uint64{}, [][]byte{})
 				return
 
-			case <-time.After(wait):
-				// Throttling up, fetch whatever's available
+			case <-waitTimer.C:
+				// Throttling up, fetch whatever is available
 			}
 		}
 		// Allocate as much as we can handle and request servicing
@@ -632,11 +637,16 @@ func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan 
 			request <- &Retrieval{Bit: bit, Sections: sections, Context: s.ctx}
 
 			result := <-request
+
+			// Deliver a result before s.Close() to avoid a deadlock
+			s.deliverSections(result.Bit, result.Sections, result.Bitsets)
+
 			if result.Error != nil {
-				s.err.Store(result.Error)
+				s.errLock.Lock()
+				s.err = result.Error
+				s.errLock.Unlock()
 				s.Close()
 			}
-			s.deliverSections(result.Bit, result.Sections, result.Bitsets)
 		}
 	}
 }
