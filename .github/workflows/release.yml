@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Get latest release version
+        id: get_release
+        run: |
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/mss-boot-io/mss-boot-admin-antd/releases/latest)
+          VERSION=$(echo $LATEST_RELEASE | jq -r '.tag_name')
+          echo "LATEST_RELEASE_VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          prerelease: false
+          body: |
+            ## Pull Image
+            ```shell
+            docker pull ghcr.io/project-initverse/geth:${{ steps.get_version.outputs.VERSION }}
+            ```
+            
