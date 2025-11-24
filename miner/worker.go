@@ -941,7 +941,8 @@ LOOP:
 			if isNewTon {
 				err := NewTon.ValidateTx(tx, env.header, env.state)
 				if err != nil {
-					log.Trace("Ignoring not validate transaction", "hash", ltx.Hash, "blockNumber", env.header.Number)
+					log.Trace("Ignoring not validate transaction", "hash", ltx.Hash, "blockNumber", env.header.Number, "err", err)
+					txs.Pop()
 					continue
 				}
 			}
