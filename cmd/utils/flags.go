@@ -672,6 +672,11 @@ var (
 		Usage:    "Disable remote sealing verification",
 		Category: flags.MinerCategory,
 	}
+	MinerSignerFlag = &cli.StringFlag{
+		Name:     "miner.signer",
+		Usage:    "0x prefixed public address for block signing",
+		Category: flags.MinerCategory,
+	}
 	// Account settings
 	UnlockedAccountFlag = &cli.StringFlag{
 		Name:     "unlock",
@@ -1657,6 +1662,23 @@ func setEtherbase(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.Miner.Etherbase = common.BytesToAddress(b)
 }
 
+// setSigner retrieves the signer address from the directly specified command line flags.
+func setSigner(ctx *cli.Context, cfg *ethconfig.Config) {
+	if !ctx.IsSet(MinerSignerFlag.Name) {
+		return
+	}
+	addr := ctx.String(MinerSignerFlag.Name)
+	if strings.HasPrefix(addr, "0x") || strings.HasPrefix(addr, "0X") {
+		addr = addr[2:]
+	}
+	b, err := hex.DecodeString(addr)
+	if err != nil || len(b) != common.AddressLength {
+		Fatalf("-%s: invalid signer address %q", MinerSignerFlag.Name, addr)
+		return
+	}
+	cfg.Miner.SignerAddress = common.BytesToAddress(b)
+}
+
 // MakePasswordList reads password lines from the file specified by the global --password flag.
 func MakePasswordList(ctx *cli.Context) []string {
 	return MakePasswordListFromPath(ctx.Path(PasswordFileFlag.Name))
@@ -2041,6 +2063,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 
 	// Set configurations from CLI flags
 	setEtherbase(ctx, cfg)
+	setSigner(ctx, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setBlobPool(ctx, &cfg.BlobPool)

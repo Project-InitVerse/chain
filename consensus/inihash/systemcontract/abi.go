@@ -1,11 +1,12 @@
 package systemcontract
 
 import (
+	"math/big"
+	"strings"
+
 	"github.com/Project-InitVerse/chain/accounts/abi"
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/params"
-	"math/big"
-	"strings"
 )
 
 // ValidatorsInteractiveABI contains all methods to interactive with validator contracts.
@@ -383,6 +384,65 @@ const AddrListInteractiveABI = `
     }
   ]`
 
+const MinerDelegateABI = `[
+        {
+            "inputs": [],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "minter",
+                    "type": "address"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "delegate",
+                    "type": "address"
+                }
+            ],
+            "name": "SET_DELEGATE",
+            "type": "event"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "minter_delegate",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_delegate",
+                    "type": "address"
+                }
+            ],
+            "name": "set_delegate",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]`
+
 const DevMappingPosition = 2
 
 var (
@@ -402,6 +462,7 @@ var (
 
 	AddressListContractName          = "address_list"
 	AddressListContractAddr          = common.HexToAddress("0x000000000000000000000000000000000000C001")
+	MinerDelegateContractAddr        = common.HexToAddress("0x000000000000000000000000000000000000C009")
 	ValidMethod                      = "checkValid"
 	AddressListContractAdminAddr     = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")
 	AddressListTestContractAdminAddr = common.HexToAddress("0x2b9ac060e7d20cf91bbb6719178d957f9c441235")

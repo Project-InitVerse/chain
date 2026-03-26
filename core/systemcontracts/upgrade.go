@@ -3,10 +3,12 @@ package systemcontracts
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Project-InitVerse/chain/core/systemcontracts/newton"
 	"math/big"
 	"reflect"
 	"strings"
+
+	einstein "github.com/Project-InitVerse/chain/core/systemcontracts/Einstein"
+	"github.com/Project-InitVerse/chain/core/systemcontracts/newton"
 
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/core/systemcontracts/bohr"
@@ -97,6 +99,8 @@ var (
 	maxwellUpgrade = make(map[string]*Upgrade)
 
 	newtonUpgrade = make(map[string]*Upgrade)
+
+	EinsteinUpgrade = make(map[string]*Upgrade)
 )
 
 func init() {
@@ -1011,6 +1015,26 @@ func init() {
 			},
 		},
 	}
+	EinsteinUpgrade[mainNet] = &Upgrade{
+		UpgradeName: "Einstein",
+		Configs: []*UpgradeConfig{
+			{
+				ContractAddr: common.HexToAddress(MinerDelegateContract),
+				CommitUrl:    "",
+				Code:         einstein.MainnetDelegateContract,
+			},
+		},
+	}
+	EinsteinUpgrade[testNet] = &Upgrade{
+		UpgradeName: "Einstein",
+		Configs: []*UpgradeConfig{
+			{
+				ContractAddr: common.HexToAddress(MinerDelegateContract),
+				CommitUrl:    "",
+				Code:         einstein.TestnetDelegateContract,
+			},
+		},
+	}
 	maxwellUpgrade[mainNet] = &Upgrade{
 		UpgradeName: "maxwell",
 		Configs: []*UpgradeConfig{
@@ -1159,6 +1183,9 @@ func upgradeBuildInSystemContract(config *params.ChainConfig, blockNumber *big.I
 	}
 	if config.IsOnNewton(blockNumber) {
 		applySystemContractUpgrade(newtonUpgrade[network], blockNumber, statedb, logger)
+	}
+	if config.IsOnEinstein(blockNumber) {
+		applySystemContractUpgrade(EinsteinUpgrade[network], blockNumber, statedb, logger)
 	}
 	/*
 		apply other upgrades

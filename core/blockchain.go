@@ -1933,6 +1933,14 @@ func (bc *BlockChain) WriteBlockAndSetHead(block *types.Block, receipts []*types
 // writeBlockAndSetHead is the internal implementation of WriteBlockAndSetHead.
 // This function expects the chain mutex to be held.
 func (bc *BlockChain) writeBlockAndSetHead(block *types.Block, receipts []*types.Receipt, logs []*types.Log, state *state.StateDB, sealedBlockSender *event.TypeMux) (status WriteStatus, err error) {
+	// Validate block signature for locally mined blocks
+	if validator, ok := bc.validator.(*BlockValidator); ok {
+		if err := validator.validateBlockSignature(block); err != nil {
+			log.Error("Block signature validation failed", "number", block.Number(), "hash", block.Hash(), "err", err)
+			return NonStatTy, err
+		}
+	}
+
 	currentBlock := bc.CurrentBlock()
 	reorg, err := bc.forker.ReorgNeededWithFastFinality(currentBlock, block.Header())
 	if err != nil {

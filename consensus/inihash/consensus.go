@@ -19,6 +19,11 @@ package inihash
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"runtime"
+	"time"
+
 	"github.com/Project-InitVerse/chain/consensus/inihash/systemcontract"
 	"github.com/Project-InitVerse/chain/consensus/inihash/vmcaller"
 	"github.com/Project-InitVerse/chain/core"
@@ -28,10 +33,6 @@ import (
 	"github.com/Project-InitVerse/chain/log"
 	"github.com/holiman/uint256"
 	"github.com/shopspring/decimal"
-	"math"
-	"math/big"
-	"runtime"
-	"time"
 
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/common/gopool"

@@ -64,6 +64,7 @@ var (
 		ShanghaiTime:            newUint64(12222_965_000),
 		CancunTime:              newUint64(12222_965_000),
 		NewtonBlock:             big.NewInt(872_000),
+		EinsteinBlock:           big.NewInt(2400_000),
 		DepositContractAddress:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		//Ethash:                  new(EthashConfig),
 		Inihash: &InihashConfig{},
@@ -97,6 +98,7 @@ var (
 		ShanghaiTime:            newUint64(12222_965_000),
 		CancunTime:              newUint64(12222_965_000),
 		NewtonBlock:             big.NewInt(955_000),
+		EinsteinBlock:           big.NewInt(2_185_000),
 		DepositContractAddress:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		//Ethash:                  new(EthashConfig),
 		Inihash: &InihashConfig{},
@@ -712,6 +714,7 @@ type ChainConfig struct {
 	HertzBlock      *big.Int `json:"hertzBlock,omitempty"`      // hertzBlock switch block (nil = no fork, 0 = already activated)
 	HertzfixBlock   *big.Int `json:"hertzfixBlock,omitempty"`   // hertzfixBlock switch block (nil = no fork, 0 = already activated)
 	NewtonBlock     *big.Int `json:"newtonBlock,omitempty"`     // newtonBlock switch block (nil = no fork, 0 = already activated)
+	EinsteinBlock   *big.Int `json:"einsteinBlock,omitempty"`   // einsteinBlock switch block (nil = no fork, 0 = already activated)
 	// Various consensus engines
 	Ethash             *EthashConfig       `json:"ethash,omitempty"`
 	Inihash            *InihashConfig      `json:"inihash,omitempty" toml:",omitempty"`
@@ -866,7 +869,7 @@ func (c *ChainConfig) String() string {
 	}
 
 	return fmt.Sprintf("{ChainID: %v, Engine: %v, Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, Ramanujan: %v, Niels: %v, "+
-		"MirrorSync: %v, Bruno: %v, Berlin: %v, YOLO v3: %v, CatalystBlock: %v, London: %v, ArrowGlacier: %v, MergeFork:%v, Euler: %v, Gibbs: %v, Nano: %v, Moran: %v, Planck: %v,Luban: %v, Plato: %v, Hertz: %v, Hertzfix: %v, "+
+		"MirrorSync: %v, Bruno: %v, Berlin: %v, YOLO v3: %v, CatalystBlock: %v, London: %v, ArrowGlacier: %v, MergeFork:%v, Euler: %v, Gibbs: %v, Nano: %v, Moran: %v, Planck: %v,Luban: %v, Plato: %v, Hertz: %v, Hertzfix: %v, NewTon: %v, Einstein: %v, "+
 		"ShanghaiTime: %v, KeplerTime: %v, FeynmanTime: %v, FeynmanFixTime: %v, CancunTime: %v, HaberTime: %v, HaberFixTime: %v, BohrTime: %v, PascalTime: %v, PragueTime: %v, LorentzTime: %v, MaxwellTime: %v, FermiTime: %v}",
 		c.ChainID,
 		engine,
@@ -901,6 +904,7 @@ func (c *ChainConfig) String() string {
 		c.HertzBlock,
 		c.HertzfixBlock,
 		c.NewtonBlock,
+		c.EinsteinBlock,
 		ShanghaiTime,
 		KeplerTime,
 		FeynmanTime,
@@ -1053,11 +1057,29 @@ func (c *ChainConfig) IsNewTon(num *big.Int) bool {
 	return isBlockForked(c.NewtonBlock, num)
 }
 
+func (c *ChainConfig) IsEinstein(num *big.Int) bool {
+	return isBlockForked(c.EinsteinBlock, num)
+}
+
 func (c *ChainConfig) IsOnHertzfix(num *big.Int) bool {
 	return configBlockEqual(c.HertzfixBlock, num)
 }
 func (c *ChainConfig) IsOnNewton(num *big.Int) bool {
 	return configBlockEqual(c.NewtonBlock, num)
+}
+
+func (c *ChainConfig) IsOnEinstein(num *big.Int) bool {
+	return configBlockEqual(c.EinsteinBlock, num)
+}
+
+// IsEinsteinSignatureActive returns whether block signature validation should be active.
+// Signature validation starts 50000 blocks after Einstein fork to allow time for delegate setup.
+func (c *ChainConfig) IsEinsteinSignatureActive(num *big.Int) bool {
+	if c.EinsteinBlock == nil {
+		return false
+	}
+	signatureActiveBlock := new(big.Int).Add(c.EinsteinBlock, big.NewInt(10000))
+	return num.Cmp(signatureActiveBlock) >= 0
 }
 
 // IsMuirGlacier returns whether num is either equal to the Muir Glacier (EIP-2384) fork block or greater.
@@ -1382,6 +1404,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "hertzBlock", block: c.HertzBlock},
 		{name: "hertzfixBlock", block: c.HertzfixBlock},
 		{name: "newtonBlock", block: c.NewtonBlock},
+		{name: "einsteinBlock", block: c.EinsteinBlock},
 		{name: "keplerTime", timestamp: c.KeplerTime},
 		{name: "feynmanTime", timestamp: c.FeynmanTime},
 		{name: "feynmanFixTime", timestamp: c.FeynmanFixTime},
@@ -1567,6 +1590,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, headNumber *big.Int, 
 	}
 	if isForkBlockIncompatible(c.NewtonBlock, newcfg.NewtonBlock, headNumber) {
 		return newBlockCompatError("newton fork block", c.NewtonBlock, newcfg.NewtonBlock)
+	}
+	if isForkBlockIncompatible(c.EinsteinBlock, newcfg.EinsteinBlock, headNumber) {
+		return newBlockCompatError("Einstein fork block", c.EinsteinBlock, newcfg.EinsteinBlock)
 	}
 	if isForkTimestampIncompatible(c.ShanghaiTime, newcfg.ShanghaiTime, headTimestamp) {
 		return newTimestampCompatError("Shanghai fork timestamp", c.ShanghaiTime, newcfg.ShanghaiTime)

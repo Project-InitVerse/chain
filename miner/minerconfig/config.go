@@ -44,6 +44,7 @@ var (
 // Config is the configuration parameters of mining.
 type Config struct {
 	Etherbase              common.Address `toml:",omitempty"` // Public address for block mining rewards
+	SignerAddress          common.Address `toml:",omitempty"` // Specified address for block signing
 	ExtraData              hexutil.Bytes  `toml:",omitempty"` // Block extra data set by the miner
 	DelayLeftOver          *time.Duration `toml:",omitempty"` // Time reserved to finalize a block(calculate root, distribute income...)
 	GasFloor               uint64         // Target gas floor for mined blocks.

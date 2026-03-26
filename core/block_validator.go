@@ -19,12 +19,20 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math"
+	"strings"
 
+	"github.com/Project-InitVerse/chain/accounts/abi"
+	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
+	"github.com/Project-InitVerse/chain/consensus/inihash/systemcontract"
 	"github.com/Project-InitVerse/chain/core/state"
 	"github.com/Project-InitVerse/chain/core/types"
+	"github.com/Project-InitVerse/chain/core/vm"
+	"github.com/Project-InitVerse/chain/crypto"
 	"github.com/Project-InitVerse/chain/params"
 	"github.com/Project-InitVerse/chain/trie"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type BlockValidatorOption func(*BlockValidator) *BlockValidator
@@ -141,6 +149,13 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 			}
 			return nil
 		},
+		func() error {
+			// Validate block signature
+			if err := v.validateBlockSignature(block); err != nil {
+				return err
+			}
+			return nil
+		},
 	}
 	validateRes := make(chan error, len(validateFuns))
 	for _, f := range validateFuns {
@@ -156,6 +171,166 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		}
 	}
 	return nil
+}
+
+// validateBlockSignature validates the block signature
+func (v *BlockValidator) validateBlockSignature(block *types.Block) error {
+	header := block.Header()
+
+	log.Info("validateBlockSignature called", "number", header.Number, "isEinsteinSignatureActive", v.bc.Config().IsEinsteinSignatureActive(header.Number))
+
+	// Check if Einstein signature validation is active
+	if !v.bc.Config().IsEinsteinSignatureActive(header.Number) {
+		// For blocks before Einstein signature activation, skip signature validation
+		log.Info("Einstein signature not yet active, skipping signature validation")
+		return nil
+	}
+
+	// Check if V, R, S exist
+	if header.V == nil || header.R == nil || header.S == nil {
+		log.Warn("Block signature missing", "v", header.V, "r", header.R, "s", header.S)
+		return errors.New("block signature missing (V, R, or S is nil)")
+	}
+
+	// Get signer from header
+	signer := header.Signer
+	if signer == nil || *signer == (common.Address{}) {
+		return errors.New("block signer missing")
+	}
+
+	//log.Info("validateBlockSignature", "number", header.Number, "signer", signer, "coinbase", header.Coinbase)
+
+	// Ensure header.Extra has enough space for extraSeal (65 bytes)
+	// EncodeSigHeader assumes header.Extra has at least 65 bytes
+	// extraSeal := 65
+	// if len(header.Extra) < extraSeal {
+	// 	return errors.New("block extra data too short for signature validation")
+	// }
+
+	// Calculate the block header hash
+	hash := v.bc.Engine().SealHash(header)
+	//log.Info("Validating block signature", "number", header.Number, "hash", hash, "signer", signer)
+
+	// SignData does keccak256(data) internally, so we need to do the same here
+	signingHash := crypto.Keccak256(hash.Bytes())
+
+	// Combine V, R, S into signature (65 bytes: V(1) + R(32) + S(32))
+	signature := make([]byte, 65)
+	signature[64] = byte(header.V.Uint64())
+	rBytes := header.R.Bytes()
+	sBytes := header.S.Bytes()
+	// R and S are big-endian, so we need to pad to 32 bytes
+	copy(signature[32-len(rBytes):32], rBytes)
+	copy(signature[64-len(sBytes):], sBytes)
+
+	// Recover the public key from the signature
+	pubkey, err := crypto.Ecrecover(signingHash, signature)
+	if err != nil {
+		return fmt.Errorf("failed to recover public key from signature: %v", err)
+	}
+
+	// Derive the address from the public key
+	var recoveredAddr common.Address
+	copy(recoveredAddr[:], crypto.Keccak256(pubkey[1:])[12:])
+	// Check if the recovered address matches the signer
+	if recoveredAddr != *signer {
+		//log.Info("Signature validation failed: recovered address does not match signer", "recovered", recoveredAddr, "signer", signer)
+		return errors.New("block signature invalid: recovered address does not match signer")
+	}
+
+	// Get coinbase (recipient)
+	recipient := header.Coinbase
+
+	// Check if signer is the recipient
+	if *signer == recipient {
+		//	log.Info("Signature validation passed: signer is recipient", "signer", signer)
+		return nil
+	}
+
+	// Check delegate from contract at 0x000000000000000000000000000000000000C009
+	delegateAddr, err := v.getDelegateAddress(recipient, header)
+	if err != nil {
+		log.Info("Failed to get delegate address", "err", err)
+		return errors.New("block signature invalid: signer not authorized")
+	}
+
+	//log.Debug("Signature validation: checking delegate", "signer", signer, "delegate", delegateAddr, "recipient", recipient)
+	// Check if signer matches the delegate address
+	if *signer == delegateAddr {
+		log.Info("Signature validation passed: signer is delegate of recipient", "signer", signer, "delegate", delegateAddr)
+		return nil
+	}
+
+	//log.Info("Signature validation failed: signer not authorized", "signer", signer, "delegate", delegateAddr)
+	return errors.New("block signature invalid: signer not authorized")
+}
+
+// getDelegateAddress retrieves the delegate address for a given recipient from the contract
+func (v *BlockValidator) getDelegateAddress(recipient common.Address, header *types.Header) (common.Address, error) {
+	// Get the parent block to access its state
+	parent := v.bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
+	if parent == nil {
+		return common.Address{}, errors.New("parent block not found")
+	}
+
+	// Get the state at the parent block
+	stateDB, err := v.bc.StateAt(parent.Root())
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to get state at parent block: %v", err)
+	}
+
+	// Parse the ABI from systemcontract package
+	delegateABI, err := abi.JSON(strings.NewReader(systemcontract.MinerDelegateABI))
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to parse delegate ABI: %v", err)
+	}
+
+	// Pack the call data - using minter_delegate method
+	delegateMethod := "minter_delegate"
+	data, err := delegateABI.Pack(delegateMethod, recipient)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to pack delegate call: %v", err)
+	}
+
+	// Create a minimal chain context
+	chainContext := &minimalChainContext{bc: v.bc}
+
+	// Create EVM block context
+	blockContext := NewEVMBlockContext(header, chainContext, &header.Coinbase)
+
+	// Create EVM instance
+	evm := vm.NewEVM(blockContext, stateDB, v.bc.Config(), vm.Config{})
+	// Contract address from systemcontract package
+	contractAddr := systemcontract.MinerDelegateContractAddr
+	// Call the contract
+	ret, _, err := evm.StaticCall(vm.AccountRef(recipient), contractAddr, data, math.MaxUint64)
+	if err != nil {
+		return common.Address{}, fmt.Errorf("failed to call delegate contract: %v", err)
+	}
+	// Unpack the result
+	var delegatedAddr common.Address
+	if err := delegateABI.UnpackIntoInterface(&delegatedAddr, delegateMethod, ret); err != nil {
+		return common.Address{}, fmt.Errorf("failed to unpack delegate result: %v", err)
+	}
+	log.Info("getDelegateAddress result", "recipient", recipient, "delegate", delegatedAddr)
+	return delegatedAddr, nil
+}
+
+// minimalChainContext implements ChainContext for EVM execution
+type minimalChainContext struct {
+	bc *BlockChain
+}
+
+func (m *minimalChainContext) Engine() consensus.Engine {
+	return m.bc.Engine()
+}
+
+func (m *minimalChainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
+	return m.bc.GetHeader(hash, number)
+}
+
+func (m *minimalChainContext) Config() *params.ChainConfig {
+	return m.bc.Config()
 }
 
 // ValidateState validates the various changes that happen after a state transition,

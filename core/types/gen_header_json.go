@@ -36,6 +36,10 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		TeamRate         hexutil.Uint64  `json:"team_rate"          gencodec:"required"`
 		Nonce            BlockNonce      `json:"nonce"`
 		ExtraNonce       BlockNonce      `json:"extra_nonce"`
+		Signer           *common.Address `json:"signer" rlp:"optional"`
+		V                *hexutil.Big    `json:"v" rlp:"optional"`
+		R                *hexutil.Big    `json:"r" rlp:"optional"`
+		S                *hexutil.Big    `json:"s" rlp:"optional"`
 		BaseFee          *hexutil.Big    `json:"baseFeePerGas" rlp:"optional"`
 		WithdrawalsHash  *common.Hash    `json:"withdrawalsRoot" rlp:"optional"`
 		BlobGasUsed      *hexutil.Uint64 `json:"blobGasUsed" rlp:"optional"`
@@ -65,6 +69,10 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.TeamRate = hexutil.Uint64(h.TeamRate)
 	enc.Nonce = h.Nonce
 	enc.ExtraNonce = h.ExtraNonce
+	enc.Signer = h.Signer
+	enc.V = (*hexutil.Big)(h.V)
+	enc.R = (*hexutil.Big)(h.R)
+	enc.S = (*hexutil.Big)(h.S)
 	enc.BaseFee = (*hexutil.Big)(h.BaseFee)
 	enc.WithdrawalsHash = h.WithdrawalsHash
 	enc.BlobGasUsed = (*hexutil.Uint64)(h.BlobGasUsed)
@@ -98,6 +106,10 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		TeamRate         *hexutil.Uint64 `json:"team_rate"          gencodec:"required"`
 		Nonce            *BlockNonce     `json:"nonce"`
 		ExtraNonce       *BlockNonce     `json:"extra_nonce"`
+		Signer           *common.Address `json:"signer" rlp:"optional"`
+		V                *hexutil.Big    `json:"v" rlp:"optional"`
+		R                *hexutil.Big    `json:"r" rlp:"optional"`
+		S                *hexutil.Big    `json:"s" rlp:"optional"`
 		BaseFee          *hexutil.Big    `json:"baseFeePerGas" rlp:"optional"`
 		WithdrawalsHash  *common.Hash    `json:"withdrawalsRoot" rlp:"optional"`
 		BlobGasUsed      *hexutil.Uint64 `json:"blobGasUsed" rlp:"optional"`
@@ -184,6 +196,18 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ExtraNonce != nil {
 		h.ExtraNonce = *dec.ExtraNonce
+	}
+	if dec.Signer != nil {
+		h.Signer = dec.Signer
+	}
+	if dec.V != nil {
+		h.V = (*big.Int)(dec.V)
+	}
+	if dec.R != nil {
+		h.R = (*big.Int)(dec.R)
+	}
+	if dec.S != nil {
+		h.S = (*big.Int)(dec.S)
 	}
 	if dec.BaseFee != nil {
 		h.BaseFee = (*big.Int)(dec.BaseFee)

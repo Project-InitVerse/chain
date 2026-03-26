@@ -28,6 +28,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/holiman/uint256"
 
+	"github.com/Project-InitVerse/chain/accounts"
 	"github.com/Project-InitVerse/chain/common"
 	"github.com/Project-InitVerse/chain/consensus"
 	"github.com/Project-InitVerse/chain/consensus/misc/eip1559"
@@ -194,14 +195,15 @@ type bidFetcher interface {
 // worker is the main object which takes care of submitting new work to consensus engine
 // and gathering the sealing result.
 type worker struct {
-	bidFetcher  bidFetcher
-	prefetcher  core.Prefetcher
-	config      *minerconfig.Config
-	chainConfig *params.ChainConfig
-	engine      consensus.Engine
-	eth         Backend
-	prio        []common.Address // A list of senders to prioritize
-	chain       *core.BlockChain
+	bidFetcher     bidFetcher
+	prefetcher     core.Prefetcher
+	config         *minerconfig.Config
+	chainConfig    *params.ChainConfig
+	engine         consensus.Engine
+	eth            Backend
+	prio           []common.Address // A list of senders to prioritize
+	chain          *core.BlockChain
+	accountManager *accounts.Manager
 
 	// Feeds
 	pendingLogsFeed event.Feed
@@ -256,6 +258,13 @@ type worker struct {
 func newWorker(config *minerconfig.Config, engine consensus.Engine, eth Backend, mux *event.TypeMux, init bool) *worker {
 	recentMinedBlocks, _ := lru.New(recentMinedCacheLimit)
 	chainConfig := eth.BlockChain().Config()
+
+	// Try to get account manager from backend
+	var accountManager *accounts.Manager
+	if ethBackend, ok := eth.(interface{ AccountManager() *accounts.Manager }); ok {
+		accountManager = ethBackend.AccountManager()
+	}
+
 	worker := &worker{
 		prefetcher:         core.NewStatePrefetcher(chainConfig, eth.BlockChain().HeadChain()),
 		config:             config,
@@ -263,6 +272,7 @@ func newWorker(config *minerconfig.Config, engine consensus.Engine, eth Backend,
 		engine:             engine,
 		eth:                eth,
 		chain:              eth.BlockChain(),
+		accountManager:     accountManager,
 		mux:                mux,
 		coinbase:           config.Etherbase,
 		extra:              config.ExtraData,
@@ -611,6 +621,59 @@ func (w *worker) resultLoop() {
 				log.Error("Block found but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
 				continue
 			}
+
+			// Add block signature if Einstein signature is active
+			header := block.Header()
+			if w.chainConfig.IsEinsteinSignatureActive(header.Number) {
+				// For blocks at or above activation height, add signature
+				signerAddr := w.etherbase()
+				log.Info("Einstein fork activated, preparing block signature", "number", header.Number, "signer", signerAddr)
+
+				// Check if a specific signer address is configured
+				if w.config.SignerAddress != (common.Address{}) {
+					signerAddr = w.config.SignerAddress
+					log.Info("Using configured signer address", "address", signerAddr)
+				}
+
+				header.Signer = &signerAddr
+
+				// Ensure header.Extra has enough space for extraSeal (65 bytes)
+				// EncodeSigHeader assumes header.Extra has at least 65 bytes
+
+				// Check if wallet contains private key for the signer
+				if w.accountManager != nil {
+					account := accounts.Account{Address: signerAddr}
+					wallet, err := w.accountManager.Find(account)
+					if err == nil && wallet.Contains(account) {
+						// Wallet contains the account, sign the header
+						hash := w.engine.SealHash(header)
+						log.Info("Signing block header", "number", header.Number, "hash", hash, "signer", signerAddr)
+						// SignData does keccak256(data) internally
+						signature, err := wallet.SignData(account, "", hash.Bytes())
+						if err == nil {
+							// Split signature into V, R, S
+							if len(signature) == 65 {
+								header.V = big.NewInt(int64(signature[64]))
+								header.R = new(big.Int).SetBytes(signature[0:32])
+								header.S = new(big.Int).SetBytes(signature[32:64])
+								log.Info("Block header signed successfully", "signer", signerAddr, "v", header.V, "r", header.R, "s", header.S)
+							} else {
+								log.Warn("Invalid signature length", "len", len(signature))
+							}
+						} else {
+							log.Warn("Failed to sign block header", "err", err)
+						}
+					} else {
+						log.Warn("Wallet not found for signer address", "address", signerAddr, "err", err)
+					}
+				} else {
+					log.Warn("Account manager not available for block signing")
+				}
+
+				// Create a new block with the signed header
+				block = block.WithSeal(header)
+				log.Info("Block signed after sealing", "number", block.Number(), "v", block.Header().V, "r", block.Header().R, "s", block.Header().S)
+			}
 			// Different block could share same sealhash, deep copy here to prevent write-write conflict.
 			var (
 				receipts = make([]*types.Receipt, len(task.receipts))
@@ -657,8 +720,6 @@ func (w *worker) resultLoop() {
 				prevParents = append(prevParents, block.ParentHash())
 				w.recentMinedBlocks.Add(block.NumberU64(), prevParents)
 			} else {
-				// Add() will call removeOldest internally to remove the oldest element
-				// if the LRU Cache is full
 				w.recentMinedBlocks.Add(block.NumberU64(), []common.Hash{block.ParentHash()})
 			}
 
@@ -1529,6 +1590,7 @@ func (w *worker) commit(env *environment, interval func(), update bool, start ti
 		// https://github.com/Project-InitVerse/chain/issues/24299
 		env := env.copy()
 
+		// Add sidecars to block
 		block = block.WithSidecars(env.sidecars)
 
 		select {

@@ -42,13 +42,54 @@ func (obj *Header) EncodeRLP(_w io.Writer) error {
 	w.WriteUint64(obj.TeamRate)
 	w.WriteBytes(obj.Nonce[:])
 	w.WriteBytes(obj.ExtraNonce[:])
-	_tmp1 := obj.BaseFee != nil
-	_tmp2 := obj.WithdrawalsHash != nil
-	_tmp3 := obj.BlobGasUsed != nil
-	_tmp4 := obj.ExcessBlobGas != nil
-	_tmp5 := obj.ParentBeaconRoot != nil
-	_tmp6 := obj.RequestsHash != nil
-	if _tmp1 || _tmp2 || _tmp3 || _tmp4 || _tmp5 || _tmp6 {
+	_tmp1 := obj.Signer != nil
+	_tmp2 := obj.V != nil
+	_tmp3 := obj.R != nil
+	_tmp4 := obj.S != nil
+	_tmp5 := obj.BaseFee != nil
+	_tmp6 := obj.WithdrawalsHash != nil
+	_tmp7 := obj.BlobGasUsed != nil
+	_tmp8 := obj.ExcessBlobGas != nil
+	_tmp9 := obj.ParentBeaconRoot != nil
+	_tmp10 := obj.RequestsHash != nil
+	if _tmp1 || _tmp2 || _tmp3 || _tmp4 || _tmp5 || _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
+		if obj.Signer == nil {
+			w.Write([]byte{0x80})
+		} else {
+			w.WriteBytes(obj.Signer[:])
+		}
+	}
+	if _tmp2 || _tmp3 || _tmp4 || _tmp5 || _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
+		if obj.V == nil {
+			w.Write(rlp.EmptyString)
+		} else {
+			if obj.V.Sign() == -1 {
+				return rlp.ErrNegativeBigInt
+			}
+			w.WriteBigInt(obj.V)
+		}
+	}
+	if _tmp3 || _tmp4 || _tmp5 || _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
+		if obj.R == nil {
+			w.Write(rlp.EmptyString)
+		} else {
+			if obj.R.Sign() == -1 {
+				return rlp.ErrNegativeBigInt
+			}
+			w.WriteBigInt(obj.R)
+		}
+	}
+	if _tmp4 || _tmp5 || _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
+		if obj.S == nil {
+			w.Write(rlp.EmptyString)
+		} else {
+			if obj.S.Sign() == -1 {
+				return rlp.ErrNegativeBigInt
+			}
+			w.WriteBigInt(obj.S)
+		}
+	}
+	if _tmp5 || _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
 		if obj.BaseFee == nil {
 			w.Write(rlp.EmptyString)
 		} else {
@@ -58,35 +99,35 @@ func (obj *Header) EncodeRLP(_w io.Writer) error {
 			w.WriteBigInt(obj.BaseFee)
 		}
 	}
-	if _tmp2 || _tmp3 || _tmp4 || _tmp5 || _tmp6 {
+	if _tmp6 || _tmp7 || _tmp8 || _tmp9 || _tmp10 {
 		if obj.WithdrawalsHash == nil {
 			w.Write([]byte{0x80})
 		} else {
 			w.WriteBytes(obj.WithdrawalsHash[:])
 		}
 	}
-	if _tmp3 || _tmp4 || _tmp5 || _tmp6 {
+	if _tmp7 || _tmp8 || _tmp9 || _tmp10 {
 		if obj.BlobGasUsed == nil {
 			w.Write([]byte{0x80})
 		} else {
 			w.WriteUint64((*obj.BlobGasUsed))
 		}
 	}
-	if _tmp4 || _tmp5 || _tmp6 {
+	if _tmp8 || _tmp9 || _tmp10 {
 		if obj.ExcessBlobGas == nil {
 			w.Write([]byte{0x80})
 		} else {
 			w.WriteUint64((*obj.ExcessBlobGas))
 		}
 	}
-	if _tmp5 || _tmp6 {
+	if _tmp9 || _tmp10 {
 		if obj.ParentBeaconRoot == nil {
 			w.Write([]byte{0x80})
 		} else {
 			w.WriteBytes(obj.ParentBeaconRoot[:])
 		}
 	}
-	if _tmp6 {
+	if _tmp10 {
 		if obj.RequestsHash == nil {
 			w.Write([]byte{0x80})
 		} else {

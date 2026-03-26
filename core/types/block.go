@@ -124,6 +124,11 @@ type Header struct {
 
 	Nonce      BlockNonce `json:"nonce"`
 	ExtraNonce BlockNonce `json:"extra_nonce"`
+	// Signer and Signature added for block signing
+	Signer *common.Address `json:"signer" rlp:"optional"`
+	V      *big.Int        `json:"v" rlp:"optional"`
+	R      *big.Int        `json:"r" rlp:"optional"`
+	S      *big.Int        `json:"s" rlp:"optional"`
 	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
 	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
 
@@ -157,6 +162,9 @@ type headerMarshaling struct {
 	ExcessBlobGas *hexutil.Uint64
 	ValidatorRate hexutil.Uint64
 	TeamRate      hexutil.Uint64
+	V             *hexutil.Big
+	R             *hexutil.Big
+	S             *hexutil.Big
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -381,6 +389,19 @@ func CopyHeader(h *Header) *Header {
 	if h.RequestsHash != nil {
 		cpy.RequestsHash = new(common.Hash)
 		*cpy.RequestsHash = *h.RequestsHash
+	}
+	if h.Signer != nil {
+		cpy.Signer = new(common.Address)
+		*cpy.Signer = *h.Signer
+	}
+	if h.V != nil {
+		cpy.V = new(big.Int).Set(h.V)
+	}
+	if h.R != nil {
+		cpy.R = new(big.Int).Set(h.R)
+	}
+	if h.S != nil {
+		cpy.S = new(big.Int).Set(h.S)
 	}
 	return &cpy
 }
